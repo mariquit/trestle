@@ -13,6 +13,8 @@ Unlike generic prompts that jump straight to writing code, these skills enforce 
 
 ## Related OpenCode projects
 
+See [Structural](https://mariquit.github.io/structural/) for a map of these tools and how they fit into an OpenCode workflow.
+
 - [Truss](https://github.com/mariquit/truss): Plugins for OpenCode
 - [Lattice](https://github.com/mariquit/lattice): Semantic codebase wiring for OpenCode
 - [Span](https://github.com/mariquit/span): Contextual aggregate memory mesh for OpenCode
