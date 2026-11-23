@@ -32,28 +32,32 @@ Contributions generally involve three connected areas:
 
 - **Skill guidance:** Root skill files contain YAML frontmatter for discovery and instructions loaded when the skill is used. Improve the relevant skill without expanding its scope unnecessarily.
 - **Discoverability:** `README.md` explains when to use each skill through the overview and SDLC mapping. Keep these descriptions aligned with changes to skill names or behavior.
-- **Installation:** `install.sh` launches `install.py`, which owns the skill catalog. Promote a candidate only after representative trials.
+- **Installation:** `install.sh` launches `install.ts`, which owns the skill catalog. Promote a candidate only after representative trials.
 
 See [WORKFLOW.md](WORKFLOW.md) for the path from a skill change to an installed copy.
 
 ## Local Setup and Checks
 
-Use Git and Python 3.10+ (standard library only). Run the checks before pushing:
+Use Git and Node.js 24 or later. The repository checks use Node's built-in modules and do not require an npm install. Run the checks before pushing:
 
 ```bash
-python3 tests/check_skills.py
-python3 -m unittest discover -s tests -v
+node tests/check_skills.ts
+node --test tests/*.test.ts
 git diff --check
 git diff --cached --check
 ```
 
-`tests/check_skills.py` checks the catalog against the schema in [AGENTS.md](AGENTS.md) and scans for common credential shapes and suspicious instructions. Pass `lint` or `security` to run only one check. The scan reports rule names and line numbers without echoing matched text. It is heuristic, not a guarantee; review the findings and the diff manually.
+`tests/check_skills.ts` checks the catalog against the schema in [AGENTS.md](AGENTS.md) and scans for common credential shapes and suspicious instructions. Pass `lint` or `security` to run only one check. The scan reports rule names and line numbers without echoing matched text. It is heuristic, not a guarantee; review the findings and the diff manually.
+
+When changing the `de-slop` helper, run `npm ci --prefix tools/de-slop`, `npm test --prefix tools/de-slop`, and `npm run build --prefix tools/de-slop`. Include the regenerated bundle and third-party licenses with the source changes.
 
 To run catalog and whitespace checks automatically before pushing, use `git config --local core.hooksPath .githooks`. If you already use a custom hook path, call `.githooks/pre-push` from your existing hook instead. The hook checks the current checkout, not arbitrary commits or branches being pushed. Run the checks from the branch you intend to publish.
 
 For behavior changes, trial the skill on a representative task in OpenCode. Use a project where the selected model can answer a smoke prompt. A project-local copy at `.opencode/skills/<name>/SKILL.md` lets you invoke `@<name>` without changing global installs. Record the OpenCode version, model, input, expected behavior, and observed result. Record blocked trials separately from fixture results.
 
 Use `./install.sh` for normal installs. It installs `SKILL.md`, `LICENSE`, and `NOTICE` in each selected skill directory. The installer honors `OPENCODE_SKILLS_DIR`; `--skills-dir` takes precedence. With `--upgrade`, it saves each replaced directory in the printed hidden backup location, including any files not managed by Trestle. The new installation contains only the packaged files.
+
+An interrupted install can leave `.trestle-install.lock` in the skills directory. Confirm no installer is still running. Before clearing the lock, inspect any `.trestle-install-*` directories for staged files or backups and restore any missing skill directory from `previous/` without overwriting an existing installation. Keep the recovery directories until you have verified the installed copies. Remove only the empty `.trestle-install.lock` directory with `rmdir` before retrying.
 
 To test the installer without changing your OpenCode configuration, use a temporary destination:
 
@@ -73,7 +77,7 @@ If a previous Trestle checkout linked a skill, inspect `<skills-dir>/<skill>` wi
 - Preserve existing project conventions and user work. Do not turn guidance into permission for unrelated changes.
 - Keep examples accurate and distinguish OpenCode runtime results from fixture results.
 - Follow the exact [frontmatter and trigger schema](AGENTS.md#frontmatter-schema). Preserve applicable third-party license and attribution notices; do not add material you lack permission to contribute.
-- When adding or renaming a skill, update the README overview and relevant SDLC mapping. Update `CATALOG` in `install.py` if the skill should be included in installation.
+- When adding or renaming a skill, update the README overview and relevant SDLC mapping. Update `CATALOG` in `install.ts` if the skill should be included in installation.
 
 ## How to Contribute
 

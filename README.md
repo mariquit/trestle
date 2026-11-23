@@ -26,7 +26,7 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | Skill | Trigger / Command | Focus & Core Philosophy |
 | :--- | :--- | :--- |
 | [adr](adr.md) `v0.1.0` | `/adr`<br>`"document why we chose this architecture"` | **Decision Provenance.** Extracts lightweight Architecture Decision Records from chat history, emphasizing the negative space (what options were rejected and why). |
-| [de-slop](de-slop.md) `v0.1.0` | `/de-slop`<br>`"clean up this prose/doc"` | **Document Refactoring.** Purges AI slop, structural fluff, meta-commentary, and passive abstract agency from markdown text and documents. |
+| [de-slop](de-slop.md) `v0.1.0` | `/de-slop [--review]`<br>`"clean up this prose/doc"` | **Prose editing.** Rewrites prose or reviews it without editing. Review can use a bundled lint helper for cited style findings. |
 | [deconstruct](deconstruct.md) `v0.1.0` | `/deconstruct`<br>`"write down how we figured this out"` | **Knowledge Capture.** Mines the active session to extract the diagnostic path, dead ends, and core breakthrough into a durable playbook rather than a simple commit fix. |
 | [dive-deep](dive-deep.md) `v0.1.0` | `/dive-deep`<br>`"interrogate this brief before we build"` | **Requirements Discovery.** Asks one consequential question per turn before implementation. Records agreed requirements, non-goals, and observable acceptance criteria without turning open decisions into defaults. |
 | [frontend](frontend.md) `v0.2.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** Uses [Basecoat UI](https://basecoatui.com/introduction/) as the HTML-first default when no design system is established. The optional [OpenCode workflow gate](plugins/frontend/README.md) adds session checkpoints and post-edit lint. |
@@ -43,7 +43,7 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 
 ## Install
 
-From a local copy of the repository, run `./install.sh` to select skills in a terminal menu. The installer requires Python 3.10+ on a Unix-like system.
+From a local copy of the repository, run `./install.sh` to select skills in a terminal menu. The installer requires Node.js 24 or later on a Unix-like system. It does not require Python.
 
 ```sh
 ./install.sh                         # Open the selection menu
@@ -54,7 +54,9 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 
 The default destination is `$XDG_CONFIG_HOME/opencode/skills`, or `~/.config/opencode/skills` when `XDG_CONFIG_HOME` is unset. Use `--skills-dir PATH` or set `OPENCODE_SKILLS_DIR` to override it. In OpenCode, use `@skill-id` to load an installed skill.
 
-Selecting `frontend`, including through `--all`, also installs its [OpenCode plugin](plugins/frontend/README.md) and locked runtime dependencies under `<skills-dir>/frontend/plugin`. This requires Node.js 24 or later and npm. The installer prints the plugin path without changing OpenCode configuration.
+Selecting `frontend`, including through `--all`, also installs its [OpenCode plugin](plugins/frontend/README.md) and locked runtime dependencies under `<skills-dir>/frontend/plugin`. This also requires npm. The installer prints the plugin path without changing OpenCode configuration.
+
+Selecting `de-slop` copies a bundled helper to `<skills-dir>/de-slop/scripts/lint.mjs`. The helper does not need npm or network access. Run `node tools/de-slop/bundle/lint.mjs README.md` from the checkout to scan a file directly. The output is advisory JSON, not an authorship assessment. The skill can review prose manually if it cannot run the helper.
 
 Identical installs are skipped. Upgrades require `--upgrade` and print the backup location. The installer refuses live skill links; see [legacy link recovery](CONTRIBUTING.md#recover-legacy-live-links) if an old link or backup blocks installation.
 
@@ -66,7 +68,7 @@ These skills act as modular power tools invoked at specific stages of the Softwa
 
 - **Planning, Architecture & Design:** Use `/dive-deep` to resolve requirements before implementation, `/spike` to test an architectural unknown, and `/adr` to record the decision and its trade-offs.
 - **Debugging & Investigation:** Run `/triage` at the start of a complex incident to enforce a hypothesis-driven freeze before changing code.
-- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` to design mobile-first interfaces in the project's existing stack, `/terse` for concise execution, `/de-slop` to edit prose, and `/tech-writer` to refine technical source files.
+- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` to design mobile-first interfaces in the project's existing stack, `/terse` for concise execution, `/de-slop` to edit prose or `--review` to audit it without editing, and `/tech-writer` to refine technical source files.
 - **Testing & Pre-PR Audit:** Use `/regression-test` to prove a fix against unfixed and fixed refs in separate worktrees, and `/pre-flight` to check the blast radius of a change beyond the diff.
 - **Release:** Use `/release-size` to measure and verify changes to a shipped artifact.
 - **Session Continuity & Knowledge Preservation:** Use `/what-is-next` to pick one finish-first action, `/hand-over` to save or resume work in progress, and `/deconstruct` to turn a completed investigation into a reusable playbook.

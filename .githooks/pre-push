@@ -4,6 +4,6 @@
 
 set -eu
 cd "$(git rev-parse --show-toplevel)"
-"${PYTHON:-python3}" tests/check_skills.py
+node tests/check_skills.ts
 git diff --check
 git diff --cached --check

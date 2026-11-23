@@ -1,0 +1,17 @@
+{
+  "name": "trestle-de-slop-lint",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test lint.test.ts"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "mdast-util-from-markdown": "2.0.3",
+    "mdast-util-gfm-autolink-literal": "2.0.1",
+    "mdast-util-gfm-table": "2.0.0",
+    "micromark-extension-gfm-autolink-literal": "2.1.0",
+    "micromark-extension-gfm-table": "2.1.1"
+  }
+}

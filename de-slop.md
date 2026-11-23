@@ -23,9 +23,11 @@ You are a ruthless prose editor. Rewrite the provided text—or the file specifi
 - **Procedural Text Exemption:** For runbooks, QA steps, handoffs, and install instructions, trim filler without reorganizing or embellishing the procedure. Repeated wording can make steps easier to scan.
 - **Review-Only Mode (`-r`, `--review`, or explicit review-only ask):**
   * Takes precedence over `-i` / `--overwrite`; never modify files in review mode.
-    * Run the tell scan (Section 4) and reader checks (Section 3), then output ONLY a concise diagnostic report with three parts:
-    1. **Verdict:** One line stating whether the text has clustered AI tells, minor isolated patterns, or reads as clean human prose.
-    2. **Flagged Tells:** Bullet list citing line numbers or exact short quotes, the pattern name, and why it fails.
+  * If Node.js 24+ and command execution are available, use the bundled helper for a first pass: `node <skill-directory>/scripts/lint.mjs <markdown-file>`. The repo copy is `tools/de-slop/bundle/lint.mjs`, relative to `de-slop.md`. For raw text, pass it verbatim on stdin with `-` if the tool supports stdin without writing a file or interpolating the text into shell code. If the helper cannot run, review manually.
+  * The helper returns `{rule_id, line, excerpt}` records. Its stable IDs are `dash-density`, `stock-framing`, and `repeated-contrast`. Treat them as advisory candidates. Check each in context; discard protected or intentional uses. An empty result does not replace the reader checks (Section 3) or the manual tell scan (Section 4). Never infer authorship from the findings or use them to trigger edits.
+  * Output ONLY a concise diagnostic report with three parts:
+    1. **Verdict:** One line stating whether the prose has clustered issues, minor isolated issues, or no material issues.
+    2. **Flagged Tells:** Cite line numbers or exact short quotes, the rule ID for confirmed helper matches (otherwise the pattern name), and why the passage warrants a change.
     3. **Structural Notes:** Brief bullets on buried points, uniform pacing, or sections to merge/cut (do not write the full rewrite).
 - **In-Place File Overwrite (`-i` or `--overwrite`):** If present alongside a valid file path (and not in review mode) when a file-writing tool is available:
   1. Process the target file, leaving frontmatter, code blocks, tables, data, and link targets untouched.
@@ -92,13 +94,13 @@ Tells matter in **clusters**, not in isolation. One em dash or one *however* pro
 
 1. **Parse & Check Scope:** Detect mode (`-r`/`--review` or review ask, `-i`/`--overwrite`, or default rewrite); abort if the target is an agent prompt/skill; note if the text is procedural (subtraction only).
 2. **Extract Payload:** Inventory every fact, number, unit, date, name, quote, claim, protected block, and any writing sample.
-3. **Scan & Test:** Flag clustered tells from Section 4 and run the reader checks in Section 3.
-   * *Branch:* If in **Review-Only Mode**, format and output the three-part diagnostic report per Section 1 and stop.
+3. **Scan & Test:** Flag clustered tells from Section 4 and run the reader checks in Section 3. Judge buried decisions, meaningful contrasts, author voice, and what deletion would cost in context.
+   * *Branch:* If in **Review-Only Mode**, use the optional helper and output the three-part diagnostic report per Section 1, then stop.
 4. **Reorganize & Rewrite:** Strip framing and failed sentences, reorder/merge/split paragraphs so the strongest points lead, and draft whole paragraphs with varied cadence and register-appropriate voice.
 5. **Adversarial Audit:** Before delivering, answer four questions internally and fix any failures:
    * *What still makes this read as AI-generated?*
    * *Does the draft state any fact, name, number, unit, date, quote, or citation not in the source?*[cite: 1]
    * *Does any added reaction shift the author's position or imply unreported experience?*
    * *Has the de-slopping left the prose sterile?*
-   (Also verify zero stray `—` or `–` remain outside legitimate ranges or sample overrides.)
+   (Also verify zero stray `—` or `–` remain outside protected content, legitimate ranges, or sample overrides.)
 6. **Deliver:** Overwrite the file or output the final text directly per Section 1.
