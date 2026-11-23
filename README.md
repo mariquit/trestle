@@ -29,7 +29,7 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | [de-slop](de-slop.md) `v0.1.0` | `/de-slop`<br>`"clean up this prose/doc"` | **Document Refactoring.** Purges AI slop, structural fluff, meta-commentary, and passive abstract agency from markdown text and documents. |
 | [deconstruct](deconstruct.md) `v0.1.0` | `/deconstruct`<br>`"write down how we figured this out"` | **Knowledge Capture.** Mines the active session to extract the diagnostic path, dead ends, and core breakthrough into a durable playbook rather than a simple commit fix. |
 | [dive-deep](dive-deep.md) `v0.1.0` | `/dive-deep`<br>`"interrogate this brief before we build"` | Resolve requirements one decision at a time before writing code. |
-| [frontend](frontend.md) `v0.1.0` | `/frontend`<br>`"build a mobile-friendly React interface"` | **Frontend Guidance.** Uses DaisyUI components and Tailwind CSS layouts for consistent React interfaces, with attention to content hierarchy, responsive design, accessibility, and existing project conventions. |
+| [frontend](frontend.md) `v0.1.0` | `/frontend`<br>`"build a mobile-friendly React interface"` | **Frontend Guidance.** Selects version-appropriate daisyUI components by behavior, then builds accessible React interfaces with responsive Tailwind CSS and the project's existing theme. |
 | [hand-over](hand-over.md) `v0.1.0` | `/hand-over`<br>`"hand this work over to a fresh session"` | Save work in progress or check a checkpoint for drift before resuming. |
 | [integration-seam](integration-seam.md) `v0.1.0` | `/integration-seam`<br>`"prove this integration through its caller"` | Justify a boundary and verify success and failure through the real caller. |
 | [pre-flight](pre-flight.md) `v0.1.0` | `/pre-flight`<br>`"audit these changes"` | **Blast-Radius Analysis.** Audits the boundary between your git diff and the rest of the codebase to catch broken invariants and unseen caller regressions. |
@@ -64,7 +64,7 @@ These skills act as modular power tools invoked at specific stages of the Softwa
 
 - **Planning, Architecture & Design:** Use `/dive-deep` to resolve requirements before implementation, `/spike` to test an architectural unknown, and `/adr` to record the decision and its trade-offs.
 - **Debugging & Investigation:** Run `/triage` at the start of a complex incident to enforce a hypothesis-driven freeze before changing code.
-- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` for React interfaces with DaisyUI and Tailwind CSS, `/terse` for concise execution, `/de-slop` to edit prose, and `/tech-writer` to refine technical source files.
+- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` to choose and verify daisyUI patterns for responsive React interfaces, `/terse` for concise execution, `/de-slop` to edit prose, and `/tech-writer` to refine technical source files.
 - **Testing & Pre-PR Audit:** Use `/regression-test` to prove a fix against unfixed and fixed refs in separate worktrees, and `/pre-flight` to check the blast radius of a change beyond the diff.
 - **Release:** Use `/release-size` to measure and verify changes to a shipped artifact.
 - **Session Continuity & Knowledge Preservation:** Use `/what-is-next` to pick one finish-first action, `/hand-over` to save or resume work in progress, and `/deconstruct` to turn a completed investigation into a reusable playbook.
