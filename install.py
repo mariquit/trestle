@@ -6,8 +6,10 @@
 import argparse
 import curses
 import fcntl
+import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -17,6 +19,10 @@ CATALOG = (
     "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "hand-over",
     "integration-seam", "pre-flight", "regression-test", "release-size", "spike",
     "tech-writer", "terse", "triage", "what-is-next",
+)
+FRONTEND_PLUGIN = (
+    "package.json", "package-lock.json", "README.md", "src/index.ts",
+    "src/lint.ts", "src/state.ts", "src/store.ts", "src/targets.ts",
 )
 
 
@@ -80,16 +86,36 @@ def prepare(root: Path, packages: dict[str, dict[str, bytes]], upgrade: bool) ->
                 raise ValueError(f"Refusing to replace a symlink or non-directory: {path}")
             for filename in files:
                 installed = path / filename
+                for parent in installed.relative_to(path).parents:
+                    directory = path / parent
+                    if present(directory) and (directory.is_symlink() or not directory.is_dir()):
+                        raise ValueError(f"Refusing to replace a symlink or non-directory: {directory}")
                 if present(installed) and (installed.is_symlink() or not installed.is_file()):
                     raise ValueError(f"Refusing to replace a symlink or non-file: {installed}")
+            dependencies = (json.loads(files["plugin/package.json"])["dependencies"]
+                            if name == "frontend" else ())
             if all((path / filename).is_file() and (path / filename).read_bytes() == contents
-                   for filename, contents in files.items()):
+                   for filename, contents in files.items()) and all(
+                       (path / "plugin/node_modules" / dependency / "package.json").is_file()
+                       for dependency in dependencies):
                 print(f"Unchanged: {name}")
                 continue
             if not upgrade:
                 raise ValueError(f"Different or incomplete installation: {path}. Use --upgrade to replace it with a backup.")
         changed.append(name)
     return changed
+
+
+def provision_frontend(path: Path) -> None:
+    npm = shutil.which("npm")
+    if not npm:
+        raise ValueError("Installing the frontend plugin requires Node.js and npm on PATH.")
+    result = subprocess.run(
+        [npm, "ci", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
+        cwd=path, stdin=subprocess.DEVNULL, check=False,
+    )
+    if result.returncode:
+        raise ValueError(f"Could not install frontend plugin dependencies (npm exited {result.returncode}).")
 
 
 def publish(root: Path, names: list[str], packages: dict[str, dict[str, bytes]]) -> None:
@@ -105,7 +131,11 @@ def publish(root: Path, names: list[str], packages: dict[str, dict[str, bytes]])
         for name in names:
             (staged / name).mkdir()
             for filename, contents in packages[name].items():
-                (staged / name / filename).write_bytes(contents)
+                target = staged / name / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(contents)
+            if name == "frontend":
+                provision_frontend(staged / name / "plugin")
         for name in names:
             path = root / name
             if present(path):
@@ -136,6 +166,9 @@ def publish(root: Path, names: list[str], packages: dict[str, dict[str, bytes]])
 def install(root: Path, names: list[str], upgrade: bool) -> None:
     notices = {name: (ROOT / name).read_bytes() for name in ("LICENSE", "NOTICE")}
     packages = {name: {"SKILL.md": (ROOT / f"{name}.md").read_bytes(), **notices} for name in names}
+    if "frontend" in packages:
+        plugin = ROOT / "plugins/frontend"
+        packages["frontend"].update({f"plugin/{name}": (plugin / name).read_bytes() for name in FRONTEND_PLUGIN})
     root.mkdir(parents=True, exist_ok=True)
     fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
@@ -145,6 +178,8 @@ def install(root: Path, names: list[str], upgrade: bool) -> None:
             raise ValueError(f"Another installer is using {root}") from error
         if changed := prepare(root, packages, upgrade):
             publish(root, changed, packages)
+        if "frontend" in packages:
+            print(f"Frontend plugin: {root / 'frontend/plugin'}")
     finally:
         os.close(fd)
 

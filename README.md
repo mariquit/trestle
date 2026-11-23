@@ -29,7 +29,7 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | [de-slop](de-slop.md) `v0.1.0` | `/de-slop`<br>`"clean up this prose/doc"` | **Document Refactoring.** Purges AI slop, structural fluff, meta-commentary, and passive abstract agency from markdown text and documents. |
 | [deconstruct](deconstruct.md) `v0.1.0` | `/deconstruct`<br>`"write down how we figured this out"` | **Knowledge Capture.** Mines the active session to extract the diagnostic path, dead ends, and core breakthrough into a durable playbook rather than a simple commit fix. |
 | [dive-deep](dive-deep.md) `v0.1.0` | `/dive-deep`<br>`"interrogate this brief before we build"` | Resolve requirements one decision at a time before writing code. |
-| [frontend](frontend.md) `v0.1.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** Designs around the user's task, content, and accessibility needs. Uses [Basecoat UI](https://basecoatui.com/introduction/) as the HTML-first default when no design system is established. Keeps the project's renderer and uses Tailwind where the build supports it. |
+| [frontend](frontend.md) `v0.2.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** Uses [Basecoat UI](https://basecoatui.com/introduction/) as the HTML-first default when no design system is established. The optional [OpenCode workflow gate](plugins/frontend/README.md) adds session checkpoints and post-edit lint. |
 | [hand-over](hand-over.md) `v0.1.0` | `/hand-over`<br>`"hand this work over to a fresh session"` | Save work in progress or check a checkpoint for drift before resuming. |
 | [integration-seam](integration-seam.md) `v0.1.0` | `/integration-seam`<br>`"prove this integration through its caller"` | Justify a boundary and verify success and failure through the real caller. |
 | [pre-flight](pre-flight.md) `v0.1.0` | `/pre-flight`<br>`"audit these changes"` | **Blast-Radius Analysis.** Audits the boundary between your git diff and the rest of the codebase to catch broken invariants and unseen caller regressions. |
@@ -53,6 +53,8 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 ```
 
 The default destination is `$XDG_CONFIG_HOME/opencode/skills`, or `~/.config/opencode/skills` when `XDG_CONFIG_HOME` is unset. Use `--skills-dir PATH` or set `OPENCODE_SKILLS_DIR` to override it. In OpenCode, use `@skill-id` to load an installed skill.
+
+Selecting `frontend`, including through `--all`, also installs its [OpenCode plugin](plugins/frontend/README.md) and locked runtime dependencies under `<skills-dir>/frontend/plugin`. This requires Node.js 24 or later and npm. The installer prints the plugin path without changing OpenCode configuration.
 
 Identical installs are skipped. Upgrades require `--upgrade` and print the backup location. The installer refuses live skill links; see [legacy link recovery](CONTRIBUTING.md#recover-legacy-live-links) if an old link or backup blocks installation.
 
