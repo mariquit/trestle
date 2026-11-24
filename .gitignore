@@ -35,3 +35,6 @@ coverage/
 /release-assets/
 trestle-install.tar.gz
 trestle-install.sha256
+
+# Local TokenSave data
+/.tokensave/
