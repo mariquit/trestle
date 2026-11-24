@@ -76,53 +76,57 @@ Identical installs are skipped. Upgrades require `--upgrade` and print the backu
 
 ## SDLC Toolkit Mapping
 
-These skills act as modular power tools invoked at specific stages of the Software Development Life Cycle:
+Skills are grouped by what they primarily deliver, not by when they can be used. Some span several stages: the frontend skills plan, implement, and verify interfaces, while `/scaffold` recommends a stack without writing code.
 
-- **Planning, Architecture & Design:** Use `/dive-deep` to resolve requirements before implementation, `/spike` to test an architectural unknown, and `/adr` to record the decision and its trade-offs.
-- **Debugging & Investigation:** Run `/triage` at the start of a complex incident to enforce a hypothesis-driven freeze before changing code.
-- **Implementation & Refactoring:** Use `/scaffold` to choose a stack for a new site, app, or API; `/integration-seam` to justify a boundary and verify it through the real caller; `/frontend` for HTML-first apps; `/frontend-react` for Vite + React interfaces; `/terse` for concise execution; `/de-slop` to edit prose or `--review` to audit it without editing; and `/tech-writer` to refine technical source files.
-- **Testing & Pre-PR Audit:** Use `/regression-test` to prove a fix against unfixed and fixed refs in separate worktrees, and `/pre-flight` to check the blast radius of a change beyond the diff.
-- **Release:** Use `/release-size` to measure and verify changes to a shipped artifact.
-- **Session Continuity & Knowledge Preservation:** Use `/what-is-next` to pick one finish-first action, `/hand-over` to save or resume work in progress, and `/deconstruct` to turn a completed investigation into a reusable playbook.
+- **Requirements & Architecture:** Use `/dive-deep` to agree on requirements and acceptance criteria, `/scaffold` to recommend a technology stack, `/spike` to resolve an architectural unknown with a throwaway experiment, and `/adr` to record a decision and its trade-offs.
+- **Frontend Design & Implementation:** Use `/frontend` for HTML-first interfaces and `/frontend-react` for Vite + React interfaces. Both guide design, implementation, and verification of the rendered UI.
+- **Debugging & Investigation:** Use `/triage` to isolate a bug's cause through read-only diagnostics before changing code.
+- **Integration, Testing & Review:** Use `/integration-seam` to justify a boundary, define its contract, wire it, and verify success and failure through the real caller. Use `/regression-test` to prove a fix against unfixed and fixed refs, and `/pre-flight` to audit spec alignment and effects beyond the diff.
+- **Release Engineering:** Use `/release-size` to reduce one packaged artifact and verify its behavior on the target.
+- **Documentation & Knowledge Capture:** Use `/de-slop` to edit or audit prose, `/tech-writer` to clarify technical instructions without changing their schema, and `/deconstruct` to turn a completed investigation into a reusable playbook.
+- **Task & Session Workflow:** Use `/what-is-next` to recommend the next action without executing it, `/hand-over` to save or resume a checkpoint with drift checks, and `/terse` to change the agent's execution and communication mode across domains.
 
 ```mermaid
 graph TD
     subgraph SDLC ["Software Engineering Domains"]
         direction TB
 
-        subgraph S1 ["Planning, Architecture & Design"]
+        subgraph S1 ["Requirements & Architecture"]
             Brief[Unresolved Requirements] --> DiveDeep[/"/dive-deep"\]
+            Slice[Technology Stack Decision] --> Scaffold[/"/scaffold"\]
             Unknown[Architectural Unknown] --> Spike[/"/spike"\]
-            A[System Decisions & Trade-offs] --> B[/"/adr"\]
+            A[Architecture Decision Record] --> B[/"/adr"\]
+        end
+
+        subgraph S7 ["Frontend Design & Implementation"]
+            O[HTML-first UI] --> P[/"/frontend"\]
+            Vite[Vite and React UI] --> ReactUI[/"/frontend-react"\]
         end
 
         subgraph S2 ["Debugging & Investigation"]
             C[Complex Bug Reported] --> D[/"/triage"\]
         end
 
-        subgraph S3 ["Implementation & Refactoring"]
-            E[Active Development Session] --> F[/"/terse"\]
-            G[Documentation & Markdown Polish] --> H[/"/de-slop"\]
-            O[Web Interface Design & Layout] --> P[/"/frontend"\]
-            Vite[Vite and React UI] --> ReactUI[/"/frontend-react"\]
+        subgraph S4 ["Integration, Testing & Review"]
+            Caller[Boundary Contract and Caller Verification] --> Seam[/"/integration-seam"\]
+            I[Regression Proof Across Two Refs] --> J[/"/regression-test"\]
+            K[Pre-PR Change Audit] --> L[/"/pre-flight"\]
+        end
+
+        subgraph S5 ["Release Engineering"]
+            Artifact[Packaged Artifact Size] --> ReleaseSize[/"/release-size"\]
+        end
+
+        subgraph S3 ["Documentation & Knowledge Capture"]
+            G[Prose Editing or Audit] --> H[/"/de-slop"\]
             Q[Technical Source Files & Runbooks] --> R[/"/tech-writer"\]
-            Caller[Integration Boundary] --> Seam[/"/integration-seam"\]
-            Slice[Technology Stack Decision] --> Scaffold[/"/scaffold"\]
+            M[Reusable Investigation Playbook] --> N[/"/deconstruct"\]
         end
 
-        subgraph S4 ["Testing & Pre-PR Audit"]
-            I[Unfixed and Fixed Refs] --> J[/"/regression-test"\]
-            K[Local Changes / PR Prep] --> L[/"/pre-flight"\]
-        end
-
-        subgraph S5 ["Release"]
-            Artifact[Shipped Artifact] --> ReleaseSize[/"/release-size"\]
-        end
-
-        subgraph S6 ["Session Continuity & Knowledge Preservation"]
-            Priority[Competing Next Actions] --> WhatIsNext[/"/what-is-next"\]
-            Checkpoint[Work in Progress] --> HandOver[/"/hand-over"\]
-            M[Post-Investigation / Fix] --> N[/"/deconstruct"\]
+        subgraph S6 ["Task & Session Workflow"]
+            Priority[Next Action Recommendation] --> WhatIsNext[/"/what-is-next"\]
+            Checkpoint[Work-in-Progress Checkpoint] --> HandOver[/"/hand-over"\]
+            E[Agent Execution Mode] --> F[/"/terse"\]
         end
     end
 
@@ -133,7 +137,7 @@ graph TD
 
     %% Subgraph Styling
     classDef domain fill:#1e293b,stroke:#475569,stroke-width:1px,color:#f8fafc
-    class S1,S2,S3,S4,S5,S6 domain;
+    class S1,S2,S3,S4,S5,S6,S7 domain;
 
 ```
 
