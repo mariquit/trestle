@@ -3,7 +3,7 @@
 
 import { spawnSync } from "node:child_process";
 import {
-  lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync,
+  cpSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync,
   rmdirSync, rmSync, writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -13,14 +13,14 @@ import { parseArgs } from "node:util";
 
 const ROOT = import.meta.dirname;
 const CATALOG = [
-  "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "hand-over",
+  "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "frontend-react", "hand-over",
   "integration-seam", "pre-flight", "regression-test", "release-size", "spike",
   "tech-writer", "terse", "triage", "what-is-next",
 ];
-const FRONTEND_PLUGIN = [
-  "package.json", "package-lock.json", "README.md", "src/index.ts",
-  "src/lint.ts", "src/state.ts", "src/store.ts", "src/targets.ts",
-];
+const PLUGINS = new Map([
+  ["frontend", ["src/lint.ts", "src/state.ts", "src/store.ts", "src/targets.ts"]],
+  ["frontend-react", ["src/project.ts", "src/state.ts"]],
+]);
 type Package = Map<string, Buffer>;
 
 function hasCode(error: unknown, code: string): boolean {
@@ -84,9 +84,9 @@ function canonical(path: string): string {
   return join(canonical(dirname(path)), basename(path));
 }
 
-function destination(override?: string): string {
-  const config = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-  const requested = override ?? (process.env.OPENCODE_SKILLS_DIR || join(config, "opencode/skills"));
+const configRoot = () => join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "opencode");
+
+function destination(requested: string): string {
   const path = resolve(requested.replace(/^~(?=\/|$)/, homedir()));
   if (info(path)?.isSymbolicLink()) throw new Error(`Refusing to install through a symlink: ${path}`);
   const root = canonical(path);
@@ -97,7 +97,9 @@ function destination(override?: string): string {
   return root;
 }
 
-function prepare(root: string, packages: Map<string, Package>, upgrade: boolean): string[] {
+type InstallGroup = { root: string; packages: Map<string, Package>; plugins?: boolean };
+
+function prepare({ root, packages, plugins }: InstallGroup, upgrade: boolean): string[] {
   const changed: string[] = [];
   for (const [name, files] of packages) {
     const path = join(root, name);
@@ -106,6 +108,10 @@ function prepare(root: string, packages: Map<string, Package>, upgrade: boolean)
     const existing = info(path);
     if (existing) {
       if (!existing.isDirectory()) throw new Error(`Refusing to replace a symlink or non-directory: ${path}`);
+      const legacyPlugin = !plugins && PLUGINS.has(name) && info(join(path, "plugin"));
+      if (legacyPlugin && !legacyPlugin.isDirectory()) {
+        throw new Error(`Refusing to replace a symlink or non-directory: ${join(path, "plugin")}`);
+      }
       for (const filename of files.keys()) {
         const installed = join(path, filename);
         const parents: string[] = [];
@@ -119,13 +125,13 @@ function prepare(root: string, packages: Map<string, Package>, upgrade: boolean)
         const file = info(installed);
         if (file && !file.isFile()) throw new Error(`Refusing to replace a symlink or non-file: ${installed}`);
       }
-      const dependencies = name === "frontend"
-        ? Object.keys(JSON.parse(files.get("plugin/package.json")!.toString()).dependencies) : [];
+      const manifest = plugins ? files.get("package.json") : undefined;
+      const dependencies = manifest ? Object.keys(JSON.parse(manifest.toString()).dependencies) : [];
       if ([...files].every(([filename, contents]) => {
         const installed = join(path, filename);
         return info(installed)?.isFile() && readFileSync(installed).equals(contents);
-      }) && dependencies.every((dependency) => info(join(path, "plugin/node_modules", dependency, "package.json"))?.isFile())) {
-        console.log(`Unchanged: ${name}`);
+      }) && dependencies.every((dependency) => info(join(path, "node_modules", dependency, "package.json"))?.isFile())) {
+        console.log(`Unchanged: ${plugins ? "plugin " : ""}${name}`);
         continue;
       }
       if (!upgrade) throw new Error(`Different or incomplete installation: ${path}. Use --upgrade to replace it with a backup.`);
@@ -135,58 +141,74 @@ function prepare(root: string, packages: Map<string, Package>, upgrade: boolean)
   return changed;
 }
 
-function provisionFrontend(path: string): void {
+function provisionPlugin(name: string, path: string): void {
   const result = spawnSync("npm", ["ci", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"], {
     cwd: path, stdio: ["ignore", "inherit", "inherit"],
   });
-  if (hasCode(result.error, "ENOENT")) throw new Error("Installing the frontend plugin requires npm on PATH.");
+  if (hasCode(result.error, "ENOENT")) throw new Error(`Installing the ${name} plugin requires npm on PATH.`);
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`Could not install frontend plugin dependencies (npm exited ${result.status ?? result.signal}).`);
+  if (result.status !== 0) throw new Error(`Could not install ${name} plugin dependencies (npm exited ${result.status ?? result.signal}).`);
 }
 
-function publish(root: string, names: string[], packages: Map<string, Package>): void {
-  // Stage and back up on the destination filesystem so publication uses renames.
-  const work = mkdtempSync(join(root, ".trestle-install-"));
-  const staged = join(work, "staged");
-  const backups = join(work, "previous");
-  const saved: string[] = [];
-  const published: string[] = [];
+function publish(groups: (InstallGroup & { names: string[] })[]): void {
+  // Stage on each destination filesystem. Packages are one level below the staging directory,
+  // outside OpenCode's immediate-child discovery layout.
+  const workspaces: { work: string; staged: string; backups: string; saved: string[] }[] = [];
+  const undo: (() => void)[] = [];
+  const messages: string[] = [];
   try {
-    mkdirSync(staged);
-    mkdirSync(backups);
-    for (const name of names) {
-      for (const [filename, contents] of packages.get(name)!) {
-        const target = join(staged, name, filename);
-        mkdirSync(dirname(target), { recursive: true });
-        writeFileSync(target, contents);
+    for (const { root, names, packages, plugins } of groups) {
+      const work = mkdtempSync(join(root, ".trestle-install-"));
+      const staged = join(work, "staged");
+      const backups = join(work, "previous");
+      workspaces.push({ work, staged, backups, saved: [] });
+      mkdirSync(staged);
+      mkdirSync(backups);
+      for (const name of names) {
+        const files = packages.get(name)!;
+        for (const [filename, contents] of files) {
+          const target = join(staged, name, filename);
+          mkdirSync(dirname(target), { recursive: true });
+          writeFileSync(target, contents);
+        }
+        if (plugins) provisionPlugin(name, join(staged, name));
+        else if (PLUGINS.has(name) && info(join(root, name, "plugin"))) {
+          cpSync(join(root, name, "plugin"), join(staged, name, "plugin"), { recursive: true, verbatimSymlinks: true });
+        }
       }
-      if (name === "frontend") provisionFrontend(join(staged, name, "plugin"));
     }
-    for (const name of names) {
-      const path = join(root, name);
-      if (info(path)) {
-        renameSync(path, join(backups, name));
-        saved.push(name);
+    for (const [index, { root, names, plugins }] of groups.entries()) {
+      const { staged, backups, saved } = workspaces[index];
+      for (const name of names) {
+        const path = join(root, name);
+        if (info(path)) {
+          const backup = join(backups, name);
+          renameSync(path, backup);
+          saved.push(name);
+          undo.push(() => renameSync(backup, path));
+        }
+        renameSync(join(staged, name), path);
+        undo.push(() => renameSync(path, join(staged, name)));
+        messages.push(`${saved.includes(name) ? "Upgraded" : "Installed"}: ${plugins ? "plugin " : ""}${name}`);
       }
-      renameSync(join(staged, name), path);
-      published.push(name);
     }
   } catch (error) {
     try {
-      for (const name of published.reverse()) renameSync(join(root, name), join(staged, name));
-      for (const name of saved.reverse()) renameSync(join(backups, name), join(root, name));
+      for (const restore of undo.reverse()) restore();
     } catch (rollbackError) {
-      throw new Error(`Rollback incomplete. Recovery files: ${work}: ${rollbackError}`, { cause: error });
+      throw new Error(`Rollback incomplete. Recovery directories: ${workspaces.map(({ work }) => work).join(", ")}: ${rollbackError}`, { cause: error });
     }
-    rmSync(work, { recursive: true });
+    for (const { work } of workspaces) rmSync(work, { recursive: true });
     throw error;
   }
-  rmdirSync(staged);
-  for (const name of names) console.log(`${saved.includes(name) ? "Upgraded" : "Installed"}: ${name}`);
-  if (saved.length) console.log(`Backups: ${backups}`);
-  else {
-    rmdirSync(backups);
-    rmdirSync(work);
+  for (const message of messages) console.log(message);
+  for (const { work, staged, backups, saved } of workspaces) {
+    rmdirSync(staged);
+    if (saved.length) console.log(`Backups: ${backups}`);
+    else {
+      rmdirSync(backups);
+      rmdirSync(work);
+    }
   }
 }
 
@@ -195,9 +217,14 @@ function install(root: string, names: string[], upgrade: boolean): void {
   const packages = new Map(names.map((name) => [name, new Map([
     ["SKILL.md", readFileSync(join(ROOT, `${name}.md`))], ...notices,
   ])]));
-  const frontend = packages.get("frontend");
-  if (frontend) {
-    for (const name of FRONTEND_PLUGIN) frontend.set(`plugin/${name}`, readFileSync(join(ROOT, "plugins/frontend", name)));
+  const plugins = new Map<string, Package>();
+  for (const [name, sources] of PLUGINS) {
+    if (!packages.has(name)) continue;
+    const files = new Map(notices);
+    for (const file of ["package.json", "package-lock.json", "README.md", "src/index.ts", ...sources]) {
+      files.set(file, readFileSync(join(ROOT, "plugins", name, file)));
+    }
+    plugins.set(name, files);
   }
   const deSlop = packages.get("de-slop");
   if (deSlop) {
@@ -205,23 +232,33 @@ function install(root: string, names: string[], upgrade: boolean): void {
       deSlop.set(`scripts/${name}`, readFileSync(join(ROOT, "tools/de-slop/bundle", name)));
     }
   }
-  mkdirSync(root, { recursive: true });
-  if (!info(root)?.isDirectory() || realpathSync(root) !== root) {
-    throw new Error(`Refusing to install through a symlink: ${root}`);
+  const groups: InstallGroup[] = [{ root, packages }];
+  const pluginRoot = plugins.size ? destination(join(configRoot(), "plugins")) : undefined;
+  if (pluginRoot) groups.push({ root: pluginRoot, packages: plugins, plugins: true });
+  if (groups.some((a, i) => groups.slice(i + 1).some((b) => a.root === b.root || a.root.startsWith(b.root + sep) || b.root.startsWith(a.root + sep)))) {
+    throw new Error("Skill and plugin destinations must not overlap.");
   }
-  const lock = join(root, ".trestle-install.lock");
+  const locks: string[] = [];
   try {
-    mkdirSync(lock, { mode: 0o700 });
-  } catch (error) {
-    if (hasCode(error, "EEXIST")) throw new Error(`Another installer is using ${root}, or ${lock} is stale. See CONTRIBUTING.md for recovery.`);
-    throw error;
-  }
-  try {
-    const changed = prepare(root, packages, upgrade);
-    if (changed.length) publish(root, changed, packages);
-    if (frontend) console.log(`Frontend plugin: ${join(root, "frontend/plugin")}`);
+    for (const { root } of groups) {
+      mkdirSync(root, { recursive: true });
+      if (!info(root)?.isDirectory() || realpathSync(root) !== root) throw new Error(`Refusing to install through a symlink: ${root}`);
+      const lock = join(root, ".trestle-install.lock");
+      try { mkdirSync(lock, { mode: 0o700 }); }
+      catch (error) {
+        if (hasCode(error, "EEXIST")) throw new Error(`Another installer is using ${root}, or ${lock} is stale. See CONTRIBUTING.md for recovery.`);
+        throw error;
+      }
+      locks.push(lock);
+    }
+    const changed = groups.map((group) => ({ ...group, names: prepare(group, upgrade) })).filter(({ names }) => names.length);
+    if (changed.length) publish(changed);
+    if (pluginRoot) for (const name of plugins.keys()) {
+      const label = name === "frontend" ? "Frontend plugin" : "Frontend React plugin";
+      console.log(`${label}: ${join(pluginRoot, name)}`);
+    }
   } finally {
-    rmdirSync(lock);
+    for (const lock of locks.reverse()) rmdirSync(lock);
   }
 }
 
@@ -263,7 +300,7 @@ async function main(): Promise<number> {
     if (!selection) return 130;
     names = selection;
   }
-  if (names.length) install(destination(directory), names, upgrade);
+  if (names.length) install(destination(directory ?? (process.env.OPENCODE_SKILLS_DIR || join(configRoot(), "skills"))), names, upgrade);
   return 0;
 }
 

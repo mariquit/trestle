@@ -24,3 +24,5 @@ metadata:
 - Start description, author, and copyright holder with an ASCII letter. Use plain text without tabs, trailing whitespace, YAML implicit values such as `true`, `: `, a terminal colon, or inline YAML comments. Use the applicable attribution, not the example by default. Preserve third-party notices and rights.
 - Include a nonempty Markdown body. Define the job, boundaries, verification, and output. Separate observations from assumptions. Respect existing project conventions, decisions, and uncommitted work. Avoid runtime-specific tool names and unrelated approval gates.
 - Update the README overview and relevant SDLC mapping when adding or changing skills. Run `node tests/check_skills.ts` and `node --test tests/*.test.ts`; record representative OpenCode behavior trials before promotion. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local workflow.
+
+If `act` is on PATH and this change would make GitHub run a test, build, or release workflow under `.github/workflows/`, load the `act` skill and run that workflow locally before finishing; if `act` is not installed, skip.

@@ -1,0 +1,65 @@
+# Copyright (c) 2026 John Anthony Mariquit <john@mariquit.com>
+# SPDX-License-Identifier: Apache-2.0
+
+name: Installer release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test the installer
+        run: |
+          node tests/check_skills.ts
+          node --test tests/*.test.ts
+      - name: Build and verify release assets
+        run: |
+          sh scripts/package-release.sh release-assets
+          cmp install.sh release-assets/install.sh
+          cd release-assets
+          printf '%s  trestle-install.tar.gz\n' "$(cat trestle-install.sha256)" | sha256sum --check --strict
+      - name: Upload release assets
+        if: ${{ env.ACT != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-assets
+          path: |
+            release-assets/install.sh
+            release-assets/trestle-install.tar.gz
+            release-assets/trestle-install.sha256
+          if-no-files-found: error
+
+  publish:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !github.event.deleted }}
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        if: ${{ env.ACT != 'true' }}
+        with:
+          name: installer-assets
+          path: release-assets
+      - name: Publish the GitHub release
+        if: ${{ env.ACT != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create --verify-tag --generate-notes -- "$RELEASE_TAG" \
+            release-assets/install.sh release-assets/trestle-install.tar.gz release-assets/trestle-install.sha256

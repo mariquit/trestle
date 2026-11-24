@@ -29,9 +29,36 @@ skill files and notices; it does not link them to the checkout. Verify a change
 with the [temporary-destination check](CONTRIBUTING.md#local-setup-and-checks)
 before updating a normal OpenCode installation.
 
+The frontend skills always install their required plugins and locked runtime
+dependencies as separate packages in the global OpenCode `plugins/` directory
+for auto-discovery. Existing nested copies are preserved on upgrades to the
+global layout.
+
 Identical packages are skipped. A differing install requires `--upgrade`,
 which replaces the selected skill directory and preserves the previous one in
 the printed backup location. Verify the new `SKILL.md`, `LICENSE`, and `NOTICE`
 against the checkout and confirm the backup contains any local files you need.
 For a legacy link or `.skshbak` blocker, follow the
 [legacy link recovery instructions](CONTRIBUTING.md#recover-legacy-live-links).
+
+## Package a release
+
+The [Installer release workflow](.github/workflows/release.yml) runs on pushes of
+`v*` tags. The `package` job tests the installer, generates the archive and checksum
+in `release-assets/`, and copies the tracked root `install.sh` into that directory.
+The `publish` job attaches all three files to the GitHub Release for the tag.
+Only the root launcher and build definitions are tracked; do not commit the
+generated release output. Run the workflow manually in GitHub Actions to build and
+download the artifact without publishing a release.
+
+To test packaging locally with `act`, select only the `package` job:
+
+```sh
+act -W .github/workflows/release.yml workflow_dispatch -j package
+```
+
+If your engine requires a custom socket, use the same selectors with the `act`
+command from the engine resolver. The local job runs installer tests and verifies
+the launcher copy and checksum without uploading artifacts or publishing. To produce
+the files directly on your machine, run `sh scripts/package-release.sh release-assets`
+with a new output directory.

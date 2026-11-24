@@ -29,7 +29,8 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | [de-slop](de-slop.md) `v0.1.0` | `/de-slop [--review]`<br>`"clean up this prose/doc"` | **Prose editing.** Rewrites prose or reviews it without editing. Review can use a bundled lint helper for cited style findings. |
 | [deconstruct](deconstruct.md) `v0.1.0` | `/deconstruct`<br>`"write down how we figured this out"` | **Knowledge Capture.** Mines the active session to extract the diagnostic path, dead ends, and core breakthrough into a durable playbook rather than a simple commit fix. |
 | [dive-deep](dive-deep.md) `v0.1.0` | `/dive-deep`<br>`"interrogate this brief before we build"` | **Requirements Discovery.** Asks one consequential question per turn before implementation. Records agreed requirements, non-goals, and observable acceptance criteria without turning open decisions into defaults. |
-| [frontend](frontend.md) `v0.2.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** For HTML-first sites and apps such as [Astro](https://astro.build/) and [FastHTML](https://fastht.ml/). Uses [Basecoat UI](https://basecoatui.com/introduction/) when no design system is established. React, Vue, and Svelte are out of scope; React targets are directed to the planned `/frontend-react` skill. The optional [OpenCode workflow gate](plugins/frontend/README.md) adds session checkpoints and post-edit lint. |
+| [frontend](frontend.md) `v0.2.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** For HTML-first sites and apps such as [Astro](https://astro.build/) and [FastHTML](https://fastht.ml/). Uses [Basecoat UI](https://basecoatui.com/introduction/) when no design system is established. React, Vue, and Svelte are out of scope. Requires the [OpenCode V2 plugin](plugins/frontend/README.md) for session checkpoints and post-edit lint. |
+| [frontend-react](frontend-react.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/frontend-react`<br>`"design a Vite React interface"` | **Vite + React Design.** Uses standard [shadcn/ui](https://ui.shadcn.com/docs) and requires the [OpenCode V2 plugin](plugins/frontend-react/README.md) for discovery, planning, and verification. Other React frameworks and routers are out of scope. |
 | [hand-over](hand-over.md) `v0.1.0` | `/hand-over`<br>`"hand this work over to a fresh session"` | **Session Continuity.** Saves work in progress, decisions, and verification evidence in a versioned checkpoint. Checks the revision and file contents for drift without changing the checkout before resuming. |
 | [integration-seam](integration-seam.md) `v0.1.0` | `/integration-seam`<br>`"prove this integration through its caller"` | **Boundary Justification.** Keeps the capability in-process unless a concrete constraint requires a new boundary. Defines the contract and verifies both success and a meaningful failure through the real caller. |
 | [pre-flight](pre-flight.md) `v0.1.0` | `/pre-flight`<br>`"audit these changes"` | **Blast-Radius Analysis.** Audits the boundary between your git diff and the rest of the codebase to catch broken invariants and unseen caller regressions. |
@@ -48,13 +49,23 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 ```sh
 ./install.sh                         # Open the selection menu
 ./install.sh dive-deep hand-over     # Install specific skills
-./install.sh --all                   # Install all 15 skills
+./install.sh --all                   # Install all 16 skills
 ./install.sh --upgrade dive-deep     # Back up and replace a differing install
 ```
 
 The default destination is `$XDG_CONFIG_HOME/opencode/skills`, or `~/.config/opencode/skills` when `XDG_CONFIG_HOME` is unset. Use `--skills-dir PATH` or set `OPENCODE_SKILLS_DIR` to override it. In OpenCode, use `@skill-id` to load an installed skill.
 
-Selecting `frontend`, including through `--all`, also installs its [OpenCode plugin](plugins/frontend/README.md) and locked runtime dependencies under `<skills-dir>/frontend/plugin`. This also requires npm. The installer prints the plugin path without changing OpenCode configuration.
+Selecting `frontend` or `frontend-react` always installs its required plugin and locked runtime dependencies under `$XDG_CONFIG_HOME/opencode/plugins/` (default: `~/.config/opencode/plugins/`). OpenCode V2 discovers the packages automatically. No JSON or JSONC file is changed. Plugin installation requires npm. `--skills-dir` alone does not redirect the global plugins directory.
+
+For a release install without cloning, download and inspect the launcher before running it. This requires `curl` and `tar` in addition to Node.js. The release assets must be published first.
+
+```sh
+curl -fsSL -o install.sh https://github.com/mariquit/trestle/releases/latest/download/install.sh
+less install.sh
+sh install.sh frontend frontend-react
+```
+
+To stream the launcher instead, run `curl -fsSL https://github.com/mariquit/trestle/releases/latest/download/install.sh | sh`. A streamed install without arguments selects all skills. Pass explicit IDs with `sh -s -- frontend frontend-react` to select only those two. The release's SHA-256 checksum verifies the downloaded bundle before extraction; it is not a signature.
 
 Selecting `de-slop` copies a bundled helper to `<skills-dir>/de-slop/scripts/lint.mjs`. The helper does not need npm or network access. Run `node tools/de-slop/bundle/lint.mjs README.md` from the checkout to scan a file directly. The output is advisory JSON, not an authorship assessment. The skill can review prose manually if it cannot run the helper.
 
@@ -68,7 +79,7 @@ These skills act as modular power tools invoked at specific stages of the Softwa
 
 - **Planning, Architecture & Design:** Use `/dive-deep` to resolve requirements before implementation, `/spike` to test an architectural unknown, and `/adr` to record the decision and its trade-offs.
 - **Debugging & Investigation:** Run `/triage` at the start of a complex incident to enforce a hypothesis-driven freeze before changing code.
-- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` to design mobile-first interfaces for supported HTML-first apps, `/terse` for concise execution, `/de-slop` to edit prose or `--review` to audit it without editing, and `/tech-writer` to refine technical source files.
+- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` for HTML-first apps, `/frontend-react` for Vite + React interfaces, `/terse` for concise execution, `/de-slop` to edit prose or `--review` to audit it without editing, and `/tech-writer` to refine technical source files.
 - **Testing & Pre-PR Audit:** Use `/regression-test` to prove a fix against unfixed and fixed refs in separate worktrees, and `/pre-flight` to check the blast radius of a change beyond the diff.
 - **Release:** Use `/release-size` to measure and verify changes to a shipped artifact.
 - **Session Continuity & Knowledge Preservation:** Use `/what-is-next` to pick one finish-first action, `/hand-over` to save or resume work in progress, and `/deconstruct` to turn a completed investigation into a reusable playbook.
@@ -92,6 +103,7 @@ graph TD
             E[Active Development Session] --> F[/"/terse"\]
             G[Documentation & Markdown Polish] --> H[/"/de-slop"\]
             O[Web Interface Design & Layout] --> P[/"/frontend"\]
+            Vite[Vite and React UI] --> ReactUI[/"/frontend-react"\]
             Q[Technical Source Files & Runbooks] --> R[/"/tech-writer"\]
             Caller[Integration Boundary] --> Seam[/"/integration-seam"\]
         end
@@ -113,7 +125,7 @@ graph TD
     end
 
     classDef skill fill:#1fa9d7,stroke:#bae6fd,stroke-width:2px,color:#fff;
-    class B,D,F,H,J,L,N,P,R,DiveDeep,Spike,Seam,ReleaseSize,WhatIsNext,HandOver skill;
+    class B,D,F,H,J,L,N,P,R,ReactUI,DiveDeep,Spike,Seam,ReleaseSize,WhatIsNext,HandOver skill;
 
     style SDLC fill:none,stroke:#334155,stroke-width:1px,stroke-dasharray: 5 5,color:#9ba5b1
 

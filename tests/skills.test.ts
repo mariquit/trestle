@@ -37,9 +37,11 @@ function fixture(t: TestContext) {
   }
   mkdirSync(join(root, "tests"));
   copyFileSync(join(ROOT, "tests/check_skills.ts"), join(root, "tests/check_skills.ts"));
-  cpSync(join(ROOT, "plugins/frontend"), join(root, "plugins/frontend"), {
-    recursive: true, filter: (source) => basename(source) !== "node_modules",
-  });
+  for (const name of ["frontend", "frontend-react"]) {
+    cpSync(join(ROOT, "plugins", name), join(root, "plugins", name), {
+      recursive: true, filter: (source) => basename(source) !== "node_modules",
+    });
+  }
   cpSync(join(ROOT, "tools/de-slop/bundle"), join(root, "tools/de-slop/bundle"), { recursive: true });
 
   const skills = join(temp, "OpenCode skills");
@@ -64,6 +66,7 @@ for (const dependency of Object.keys(JSON.parse(readFileSync("package.json", "ut
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     OPENCODE_SKILLS_DIR: skills,
+    XDG_CONFIG_HOME: join(temp, "config"),
     PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
     TEST_NPM_LOG: npmLog,
   };
@@ -109,7 +112,10 @@ test("installer --all uses the XDG destination and accepts a directory override"
     .map((name) => basename(name, ".md")).filter((name) => !docs.has(name));
   const skills = join(xdg, "opencode/skills");
   assert.deepEqual(new Set(readdirSync(skills)), new Set(expected));
-  assert.ok(statSync(join(skills, "frontend/plugin/src/index.ts")).isFile());
+  for (const name of ["frontend", "frontend-react"]) {
+    assert.ok(statSync(join(xdg, "opencode/plugins", name, "src/index.ts")).isFile());
+    assert.ok(!existsSync(join(skills, name, "plugin")));
+  }
   const override = join(temp, "override");
   install(["--skills-dir", override, "adr"]);
   assert.ok(statSync(join(override, "adr/NOTICE")).isFile());
@@ -151,16 +157,95 @@ test("installer refuses an existing destination lock", (t) => {
 });
 
 test("installer installs the frontend plugin and skips an unchanged reinstall", (t) => {
-  const { root, skills, npmLog, install } = fixture(t);
-  const plugin = join(skills, "frontend/plugin");
+  const { root, env, npmLog, install } = fixture(t);
+  const plugin = join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend");
   assert.ok(install(["frontend"]).includes(`Frontend plugin: ${plugin}`));
   for (const name of ["package.json", "package-lock.json", "src/index.ts", "src/state.ts"]) {
     assert.deepEqual(readFileSync(join(plugin, name)), readFileSync(join(root, "plugins/frontend", name)));
   }
   assert.ok(statSync(join(plugin, "node_modules/@opencode/plugin/package.json")).isFile());
-  assert.match(install(["frontend"]), /Unchanged: frontend/);
+  assert.match(install(["frontend"]), /Unchanged: plugin frontend/);
   const invocations = readFileSync(npmLog, "utf8").trimEnd().split("\n").map((line) => JSON.parse(line));
   assert.deepEqual(invocations, [["ci", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"]]);
+});
+
+test("installer bundles frontend-react with its required plugin and locked dependencies", (t) => {
+  const { root, skills, env, npmLog, install } = fixture(t);
+  const plugin = join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend-react");
+  assert.ok(install(["frontend-react"]).includes(`Frontend React plugin: ${plugin}`));
+  assert.deepEqual(readFileSync(join(skills, "frontend-react/SKILL.md")), readFileSync(join(root, "frontend-react.md")));
+  for (const path of ["package.json", "package-lock.json", "README.md", "src/index.ts", "src/project.ts", "src/state.ts"]) {
+    assert.deepEqual(readFileSync(join(plugin, path)), readFileSync(join(root, "plugins/frontend-react", path)));
+  }
+  assert.ok(statSync(join(plugin, "node_modules/@opencode/plugin/package.json")).isFile());
+  assert.match(install(["frontend-react"]), /Unchanged: plugin frontend-react/);
+  assert.equal(readFileSync(npmLog, "utf8").trim().split("\n").length, 1);
+});
+
+test("global plugin conflicts are checked before publishing either skill or plugin", (t) => {
+  const { skills, env, install } = fixture(t);
+  const config = join(env.XDG_CONFIG_HOME!, "opencode");
+  const plugin = join(config, "plugins/frontend-react");
+  mkdirSync(plugin, { recursive: true });
+  writeFileSync(join(plugin, "package.json"), '{"name":"local-plugin"}');
+  writeFileSync(join(config, "opencode.jsonc"), '{\n  // Leave this file alone.\n  "plugins": [],\n}\n');
+  assert.match(install(["frontend", "frontend-react"], 1), /Use --upgrade/);
+  assert.deepEqual(readdirSync(skills), []);
+  assert.deepEqual(readdirSync(join(config, "plugins")), ["frontend-react"]);
+  const backup = backupFrom(install(["--upgrade", "frontend", "frontend-react"]), "frontend-react");
+  assert.equal(readFileSync(join(backup, "package.json"), "utf8"), '{"name":"local-plugin"}');
+  assert.equal(readFileSync(join(config, "opencode.jsonc"), "utf8"), '{\n  // Leave this file alone.\n  "plugins": [],\n}\n');
+  assert.ok(!existsSync(join(config, "opencode.json")));
+});
+
+test("the installer rejects the old copy-only flag", (t) => {
+  const { skills, env, install } = fixture(t);
+  assert.match(install(["frontend", "frontend-react", "--no-enable-plugins"], 2), /Unknown option/);
+  assert.ok(!existsSync(skills));
+  assert.ok(!existsSync(env.XDG_CONFIG_HOME!));
+});
+
+test("an upgrade preserves the legacy nested plugin and installs the required global plugin", (t) => {
+  const { skills, env, install } = fixture(t);
+  const legacy = join(skills, "frontend/plugin/src");
+  mkdirSync(legacy, { recursive: true });
+  writeFileSync(join(skills, "frontend/SKILL.md"), "previous skill");
+  writeFileSync(join(legacy, "index.ts"), "previous plugin");
+  install(["frontend", "--upgrade"]);
+  assert.equal(readFileSync(join(legacy, "index.ts"), "utf8"), "previous plugin");
+  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend/src/index.ts")).isFile());
+});
+
+test("streamed launcher verifies release assets before installing", (t) => {
+  const { temp, skills, env } = fixture(t);
+  const assets = join(temp, "release");
+  run("sh", [join(ROOT, "scripts/package-release.sh"), assets], { cwd: temp, env });
+  writeFileSync(join(temp, "bin/curl"), `#!/usr/bin/env node
+const { copyFileSync } = require("node:fs");
+const { join } = require("node:path");
+const args = process.argv.slice(2);
+const url = new URL(args.at(-1));
+if (url.origin + url.pathname.slice(0, url.pathname.lastIndexOf("/")) !== "https://github.com/mariquit/trestle/releases/latest/download") process.exit(42);
+copyFileSync(join(process.env.TEST_ASSETS, url.pathname.split("/").pop()), args[args.indexOf("-o") + 1]);
+`, { mode: 0o755 });
+  const launcher = readFileSync(join(assets, "install.sh"), "utf8");
+  const stream = (args: string[], code = 0) => run("sh", ["-s", "--", ...args], {
+    cwd: temp, env: { ...env, TEST_ASSETS: assets, TMPDIR: temp }, input: launcher, code,
+  });
+  const checksum = join(assets, "trestle-install.sha256");
+  const complete = readFileSync(checksum);
+  writeFileSync(checksum, "0".repeat(64));
+  assert.match(stream([], 1), /checksum mismatch/);
+  assert.ok(!existsSync(skills));
+  assert.ok(!existsSync(env.XDG_CONFIG_HOME!));
+  writeFileSync(checksum, complete);
+  stream([]);
+  for (const name of ["frontend", "frontend-react"]) {
+    assert.ok(statSync(join(skills, name, "SKILL.md")).isFile());
+    assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins", name, "node_modules/zod/package.json")).isFile());
+  }
+  assert.match(stream(["frontend-react"]), /Unchanged: plugin frontend-react/);
+  assert.ok(!readdirSync(temp).some((name) => name.startsWith("trestle-release.")));
 });
 
 test("installer publishes nothing when frontend dependency installation fails", (t) => {
@@ -174,7 +259,7 @@ test("installer publishes nothing when frontend dependency installation fails", 
   assert.ok(!existsSync(join(old, "plugin")));
   const backup = backupFrom(install(["--upgrade", "frontend"]), "frontend");
   assert.equal(readFileSync(join(backup, "SKILL.md"), "utf8"), "previous install");
-  assert.ok(statSync(join(old, "plugin/src/index.ts")).isFile());
+  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend/src/index.ts")).isFile());
 });
 
 test("installer refuses a symlinked frontend plugin", (t) => {

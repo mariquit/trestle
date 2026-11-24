@@ -8,6 +8,8 @@ metadata:
 
 # Frontend
 
+**Requires OpenCode V2 with the [Trestle frontend plugin](https://github.com/mariquit/trestle/tree/main/plugins/frontend) loaded.** If its discovery, planning, or verification tools are unavailable, stop before planning or editing. Tell the user to install the skill and plugin together with `./install.sh frontend` and reinvoke the skill. Do not continue without the gate.
+
 Design around the user's task. When the brief leaves the design system open and the project has none, start with [Basecoat UI](https://basecoatui.com/introduction/). Its component interface is HTML: semantic elements, short classes, and documented attributes carry component structure and styling. Use Tailwind for layout and responsive composition, and add vanilla JavaScript only for behavior the browser or the app does not already provide. This brings shadcn-style components and theme tokens to plain HTML and server-rendered apps without requiring React. Reuse the project's existing design system, renderer, and build pipeline for bounded changes.
 
 ## When to Use
@@ -19,7 +21,7 @@ Design around the user's task. When the brief leaves the design system open and 
 
 ## Check the frontend stack first
 
-On invocation, inspect the app or package that owns the requested UI, not just the workspace root. Set `frontend_stack` only after identifying a supported renderer. With the optional workflow gate enabled, include the flag and renderer evidence in the discovery checkpoint; otherwise carry the flag in the conversation. Do not write it to project configuration.
+On invocation, inspect the app or package that owns the requested UI, not just the workspace root. Set `frontend_stack` only after identifying a supported renderer. Include the flag and renderer evidence in the discovery checkpoint. Do not write it to project configuration.
 
 | Flag | Evidence and behavior |
 | --- | --- |
@@ -29,7 +31,7 @@ On invocation, inspect the app or package that owns the requested UI, not just t
 
 If the stack is unclear, leave the flag unset and end the turn with this question: “`/frontend` is for HTML-first apps such as Astro and FastHTML. I couldn't verify which renderer owns this UI. Can you confirm the app or renderer to target?” Do not submit discovery, plan, or edit while waiting. If the user identifies the target, check it and record a supported flag. If the user names a supported renderer that the files do not establish, record it as user-confirmed. If the user asks to proceed without classifying the renderer, end the `/frontend` invocation without setting a flag, planning, or editing.
 
-If React (including Next.js), Vue (including Nuxt), or Svelte (including SvelteKit) owns the requested UI, stop without setting a flag, planning, or editing. Check the target component, imports, and package or framework config. A framework used elsewhere in the workspace does not disqualify a supported target. Tell the user which framework is out of scope. For React only, direct the user to `/frontend-react` when available; do not invoke it on their behalf. With the optional workflow gate enabled, use its stop checkpoint for unsupported targets and requests to proceed unclassified.
+If React (including Next.js), Vue (including Nuxt), or Svelte (including SvelteKit) owns the requested UI, stop without setting a flag, planning, or editing. Check the target component, imports, and package or framework config. A framework used elsewhere in the workspace does not disqualify a supported target. Tell the user which framework is out of scope. For React only, direct the user to `/frontend-react` when available; do not invoke it on their behalf. Use the gate's stop checkpoint for unsupported targets and requests to proceed unclassified.
 
 ## Design Intent
 

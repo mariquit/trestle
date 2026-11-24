@@ -1,8 +1,8 @@
 # Frontend workflow gate for OpenCode
 
-Version 0.2.0 ships with the frontend skill. The skill remains the design reference. The plugin does not embed or inject it, and it does not require an MCP server.
+Version 0.2.0 ships with and is required by `/frontend`. The skill remains the design reference. The plugin does not embed or inject it, and it does not require an MCP server.
 
-## Enable in one project
+## Install
 
 OpenCode **2.2.5** was tested. With Node.js 24 or later and npm available, run this from the Trestle checkout:
 
@@ -10,14 +10,7 @@ OpenCode **2.2.5** was tested. With Node.js 24 or later and npm available, run t
 ./install.sh frontend
 ```
 
-Use `./install.sh --upgrade frontend` to replace an older installation. The installer prints the plugin directory it installed. Add that absolute path to the target project's `opencode.jsonc`, preserving existing `plugins` entries:
-
-```jsonc
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugins": ["/absolute/path/to/skills/frontend/plugin"]
-}
-```
+Use `./install.sh --upgrade frontend` to replace an older installation. OpenCode V2 discovers the required plugin under `$XDG_CONFIG_HOME/opencode/plugins/frontend`, or `~/.config/opencode/plugins/frontend` if XDG is unset. No config edits are required.
 
 Open a new session in that project. Ask OpenCode to inspect a UI file, or select the installed `frontend` skill, and check that the next model step shows `1_DISCOVER`. The plugin uses the [OpenCode V2 server SDK](https://opencode.ai/v2/docs/build/plugins/server), not the V1 `@opencode-ai/plugin` hook names.
 

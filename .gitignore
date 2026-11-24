@@ -30,3 +30,8 @@ pnpm-debug.log*
 build/
 dist/
 coverage/
+
+# Generated installer release assets
+/release-assets/
+trestle-install.tar.gz
+trestle-install.sha256

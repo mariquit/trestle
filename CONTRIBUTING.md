@@ -62,7 +62,7 @@ An interrupted install can leave `.trestle-install.lock` in the skills directory
 To test the installer without changing your OpenCode configuration, use a temporary destination:
 
 ```bash
-./install.sh --all --skills-dir "$test_dir/opencode"
+XDG_CONFIG_HOME="$test_dir" ./install.sh --all --skills-dir "$test_dir/opencode/skills"
 ```
 
 Set `test_dir` to an isolated temporary directory first. Compare installed files with their sources; copying successfully does not establish that a skill behaves correctly in an agent session.
