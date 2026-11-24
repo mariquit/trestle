@@ -8,16 +8,29 @@ const text = z.string().trim().min(1).max(1000).refine(
   "Provide a specific value or explain why this does not apply.",
 );
 const items = z.array(text).max(30);
+const evidenceInput = z.strictObject({ path: text, excerpt: text });
+const stackReminder = "/frontend is for HTML-first apps such as Astro and FastHTML. It does not support React, Vue, or Svelte targets.";
+const askAboutStack = `${stackReminder} Resolve conflicting or missing stack evidence for the target. If it remains unclear, leave the flag unset and ask the user to confirm the target app or renderer. End the workflow if the user declines to classify it.`;
+export const reactRedirect = "React targets are outside /frontend. Use /frontend-react when it is available.";
+export const unsupportedStackMessage = {
+  react: reactRedirect,
+  vue: "Vue targets are outside /frontend.",
+  svelte: "Svelte targets are outside /frontend.",
+};
+const frontendStack = z.enum(["astro", "fasthtml", "other"]);
 
 export const discoveryInput = z.strictObject({
   renderer: text,
   cssEntrypoint: text,
   basecoatOrDesignSystemVersion: text,
   audienceAndPrimaryTask: text,
+  frontend_stack: frontendStack,
+  stackEvidence: z.array(evidenceInput).max(6).optional(),
+  stackConfirmation: text.optional().describe("Summarize the supported renderer explicitly identified by the user. Do not submit discovery without a supported renderer."),
   evidence: z.strictObject({
-    renderer: z.strictObject({ path: text, excerpt: text }),
-    css: z.strictObject({ path: text, excerpt: text }),
-    designSystem: z.strictObject({ path: text, excerpt: text }),
+    renderer: evidenceInput,
+    css: evidenceInput,
+    designSystem: evidenceInput,
   }),
 });
 
@@ -44,7 +57,7 @@ export const verificationInput = z.strictObject({
 export type Discovery = z.infer<typeof discoveryInput>;
 export type Plan = z.infer<typeof planInput>;
 export type Verification = z.infer<typeof verificationInput>;
-export type Stage = "IDLE" | "1_DISCOVER" | "2_PLAN" | "3_IMPLEMENT" | "4_VERIFY" | "DONE";
+export type Stage = "IDLE" | "1_DISCOVER" | "2_PLAN" | "3_IMPLEMENT" | "4_VERIFY" | "DONE" | "STOPPED";
 
 export interface State {
   stage: Stage;
@@ -66,7 +79,7 @@ function parse<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
 }
 
 export function activate(state: State, explicit = false): State {
-  return state.stage === "IDLE" || (state.stage === "DONE" && explicit)
+  return state.stage === "IDLE" || (explicit && ["DONE", "STOPPED"].includes(state.stage))
     ? { ...initial(), stage: "1_DISCOVER" }
     : state;
 }
@@ -78,7 +91,13 @@ const steps: Record<Stage, string> = {
   "3_IMPLEMENT": "implement the plan, then call complete_verification",
   "4_VERIFY": "call complete_verification",
   DONE: "continue or start another frontend workflow",
+  STOPPED: "explicitly invoke /frontend to start another workflow",
 };
+
+export function stop(state: State): State {
+  if (state.stage !== "1_DISCOVER") throw new Error(`Cannot stop discovery in ${state.stage}.`);
+  return { ...initial(), stage: "STOPPED" };
+}
 
 export function writeGate(state: State): string | undefined {
   if (state.stage === "1_DISCOVER" || state.stage === "2_PLAN") {
@@ -86,10 +105,38 @@ export function writeGate(state: State): string | undefined {
   }
 }
 
+function framework(path: string, excerpt: string, contents: string): "astro" | "fasthtml" | undefined {
+  if (/\.astro$/i.test(path) ||
+      (/(?:^|\/)astro\.config\.[cm]?[jt]s$/i.test(path) && /\bfrom\s+["']astro\/config["']/.test(excerpt))) return "astro";
+  if (/(?:^|\/)package\.json$/i.test(path) && /"astro"\s*:\s*"[^"]+"/.test(excerpt)) {
+    try {
+      const manifest = JSON.parse(contents);
+      if (typeof manifest?.dependencies?.astro === "string" || typeof manifest?.devDependencies?.astro === "string") return "astro";
+    } catch { /* Invalid JSON is not dependency evidence. */ }
+  }
+  if ((/\.py$/i.test(path) && /^\s*(?:from\s+fasthtml(?:\.\w+)*\s+import\s|import\s+fasthtml\b)/m.test(excerpt)) ||
+      (/(?:^|\/)(?:pyproject\.toml|requirements[^/]*\.txt)$/i.test(path) &&
+        /^\s*(?:["']python-fasthtml(?=[\s[<>=!~;"'])|python-fasthtml(?=[\s[<>=!~;@]|$))/im.test(excerpt))) return "fasthtml";
+}
+
 export async function discover(state: State, input: unknown, read: (path: string) => Promise<string>): Promise<State> {
   if (state.stage !== "1_DISCOVER") throw new Error(`Cannot submit discovery in ${state.stage}; ${steps[state.stage]}.`);
   const discovery = parse(discoveryInput, input);
-  for (const [field, { path, excerpt }] of Object.entries(discovery.evidence)) {
+  const stack = discovery.frontend_stack;
+  const rendererPath = discovery.evidence.renderer.path;
+  if (/^(?:react\b|next\.js\b)/i.test(discovery.renderer)) throw new Error(reactRedirect);
+  if (/^(?:vue|nuxt)(?:\b|(?=\d))/i.test(discovery.renderer) || /\.vue$/i.test(rendererPath)) {
+    throw new Error(unsupportedStackMessage.vue);
+  }
+  if (/^(?:sveltekit\b|svelte\b)/i.test(discovery.renderer) || /\.svelte$/i.test(rendererPath)) {
+    throw new Error(unsupportedStackMessage.svelte);
+  }
+  const stackEvidence = discovery.stackEvidence ?? [];
+  const evidence: [string, z.infer<typeof evidenceInput>][] = [
+    ...Object.entries(discovery.evidence), ...stackEvidence.map((entry, index): [string, typeof entry] => [`stackEvidence.${index}`, entry]),
+  ];
+  const markers = new Set<string>();
+  for (const [field, { path, excerpt }] of evidence) {
     let contents: string;
     try {
       contents = await read(path);
@@ -97,6 +144,10 @@ export async function discover(state: State, input: unknown, read: (path: string
       throw new Error(`Discovery evidence for ${field} must reference a readable project file: ${path}.`);
     }
     if (!contents.includes(excerpt)) throw new Error(`Discovery evidence for ${field} does not match ${path}.`);
+    if (field === "renderer" || field.startsWith("stackEvidence.")) {
+      const marker = framework(path, excerpt, contents);
+      if (marker) markers.add(marker);
+    }
 
     // Local evidence checks are deliberately narrower than semantic review of the claims.
     if (field === "css" && !/\.css$/i.test(path) && !/(?:stylesheet|\.css\b|<style\b)/i.test(excerpt)) {
@@ -115,6 +166,10 @@ export async function discover(state: State, input: unknown, read: (path: string
         throw new Error("Design system evidence must include the Basecoat dependency or asset reference.");
       }
     }
+  }
+  if (!discovery.stackConfirmation && (markers.size > 1 ||
+      (stack === "other" ? markers.size > 0 : !markers.has(stack)))) {
+    throw new Error(askAboutStack);
   }
   return { ...state, discovery, stage: "2_PLAN" };
 }
@@ -160,8 +215,12 @@ export function beforeIdle(state: State): { state: State; remind: boolean } {
 
 export function banner(state: State): string | undefined {
   if (state.stage === "IDLE") return;
+  if (state.stage === "STOPPED") return "Frontend workflow ended without a stack flag. Do not apply /frontend guidance unless the user invokes it again.";
   const allowed = writeGate(state) ? "Reads allowed; UI edits blocked." : "UI edits allowed; new edits require verification.";
-  return `Frontend gate: ${state.stage}.\n${allowed}\nNext: ${steps[state.stage]}.`;
+  const stack = frontendStack.safeParse(state.discovery?.frontend_stack).data;
+  const note = stack ? `frontend_stack=${stack}${state.discovery?.stackConfirmation ? " (user-confirmed)" : ""}.`
+    : state.stage === "1_DISCOVER" ? `${stackReminder} Inspect the target for Astro, FastHTML, or another renderer. If unclear, show the reminder and wait for the user's answer before proceeding.` : "";
+  return [`Frontend gate: ${state.stage}.`, allowed, note, `Next: ${steps[state.stage]}.`].filter(Boolean).join("\n");
 }
 
 export function compactionContext(state: State): string | undefined {
@@ -173,6 +232,8 @@ export function compactionContext(state: State): string | undefined {
       renderer: discovery.renderer, cssEntrypoint: discovery.cssEntrypoint,
       basecoatOrDesignSystemVersion: discovery.basecoatOrDesignSystemVersion,
       audienceAndPrimaryTask: discovery.audienceAndPrimaryTask,
+      frontend_stack: frontendStack.safeParse(discovery.frontend_stack).data,
+      stackUserConfirmed: Boolean(discovery.stackConfirmation),
     },
     modified,
   })}`;

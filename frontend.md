@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: Design accessible, mobile-first web interfaces in the project's existing stack, with Basecoat and Tailwind CSS as the default for new UI without an established design system. Use when the user runs `/frontend` or asks to "design a mobile-friendly web interface".
+description: Design accessible, mobile-first web interfaces for HTML-first apps such as Astro and FastHTML, with Basecoat and Tailwind CSS as the default when no design system is established. React, Vue, and Svelte targets are out of scope. Use when the user runs `/frontend` or asks to "design a mobile-friendly web interface".
 license: Apache-2.0
 metadata:
   copyright: Copyright (c) 2026 John Anthony Mariquit <john@mariquit.com>
@@ -12,9 +12,24 @@ Design around the user's task. When the brief leaves the design system open and 
 
 ## When to Use
 
+- Use only for HTML-first sites and apps, including [Astro](https://astro.build/) and [FastHTML](https://fastht.ml/). React, Vue, and Svelte targets are out of scope.
 - Building or updating UI components, pages, or layout shells.
 - Scaffolding feature modules in frontend applications.
 - Reviewing hierarchy, responsive behavior, accessibility, or the use of an existing design system.
+
+## Check the frontend stack first
+
+On invocation, inspect the app or package that owns the requested UI, not just the workspace root. Set `frontend_stack` only after identifying a supported renderer. With the optional workflow gate enabled, include the flag and renderer evidence in the discovery checkpoint; otherwise carry the flag in the conversation. Do not write it to project configuration.
+
+| Flag | Evidence and behavior |
+| --- | --- |
+| `astro` | A target `.astro` component, Astro config importing `astro/config`, or the target package's direct `astro` dependency. Reuse Astro pages, layouts, and components. |
+| `fasthtml` | A target Python entry point importing `fasthtml` or the target app's `python-fasthtml` dependency. Reuse its Python-rendered components and existing HTMX swaps. |
+| `other` | Positive evidence that another supported HTML-first renderer owns the target, such as plain HTML or Jinja. Do not infer `other` from the absence of Astro or FastHTML markers. |
+
+If the stack is unclear, leave the flag unset and end the turn with this question: “`/frontend` is for HTML-first apps such as Astro and FastHTML. I couldn't verify which renderer owns this UI. Can you confirm the app or renderer to target?” Do not submit discovery, plan, or edit while waiting. If the user identifies the target, check it and record a supported flag. If the user names a supported renderer that the files do not establish, record it as user-confirmed. If the user asks to proceed without classifying the renderer, end the `/frontend` invocation without setting a flag, planning, or editing.
+
+If React (including Next.js), Vue (including Nuxt), or Svelte (including SvelteKit) owns the requested UI, stop without setting a flag, planning, or editing. Check the target component, imports, and package or framework config. A framework used elsewhere in the workspace does not disqualify a supported target. Tell the user which framework is out of scope. For React only, direct the user to `/frontend-react` when available; do not invoke it on their behalf. With the optional workflow gate enabled, use its stop checkpoint for unsupported targets and requests to proceed unclassified.
 
 ## Design Intent
 

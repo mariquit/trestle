@@ -11,7 +11,7 @@ import { z } from "zod";
 import { lintShell, lintUi } from "./lint.ts";
 import {
   activate, banner, beforeIdle, compactionContext, discover, discoveryInput, edited,
-  plan, planInput, readyToVerify, verificationInput, verify, writeGate,
+  plan, planInput, readyToVerify, stop, unsupportedStackMessage, verificationInput, verify, writeGate,
 } from "./state.ts";
 import { sessionStore } from "./store.ts";
 import { isFrontendSkill, shellCommand, targets } from "./targets.ts";
@@ -64,7 +64,7 @@ export default Plugin.define({
     await ctx.tool.transform((editor) => {
       editor.add({
         name: "submit_discovery",
-        description: "Confirm the frontend stack and task. Provide a literal excerpt from a project file for each evidence field.",
+        description: "Record a supported HTML-first stack for the target app. Quote literal excerpts from project files. For native or project-owned styling, cite a local style or asset reference. If the stack is unclear, ask the user to confirm it before submitting discovery. For React, Vue, or Svelte targets, or if the user declines classification, call stop_frontend instead.",
         input: z.toJSONSchema(discoveryInput),
         execute: async (input, { sessionID }) => {
           try {
@@ -74,6 +74,19 @@ export default Plugin.define({
               return file.contents;
             }));
             return { content: banner(state) };
+          } catch (error) { throw new ToolError({ message: (error as Error).message }); }
+        },
+      });
+      const stopInput = z.strictObject({ reason: z.enum(["react", "vue", "svelte", "unclassified"]) });
+      editor.add({
+        name: "stop_frontend",
+        description: "End /frontend discovery without a flag when the target uses React, Vue, or Svelte, or the user declines to classify it.",
+        input: z.toJSONSchema(stopInput),
+        execute: async (input, { sessionID }) => {
+          try {
+            const { reason } = stopInput.parse(input);
+            await store.update(sessionID, stop);
+            return { content: reason === "unclassified" ? "Frontend workflow ended without a stack flag." : unsupportedStackMessage[reason] };
           } catch (error) { throw new ToolError({ message: (error as Error).message }); }
         },
       });
@@ -104,7 +117,7 @@ export default Plugin.define({
     });
 
     await ctx.session.hook("prompt", async (event) => {
-      if (event.prompt.skills?.some(({ id }) => id === "frontend")) {
+      if (event.prompt.skills?.some(({ id }) => id === "frontend") || /^\s*\/frontend(?:\s|$)/.test(event.prompt.text ?? "")) {
         await store.update(event.sessionID, (state) => activate(state, true));
       }
     });
@@ -114,7 +127,7 @@ export default Plugin.define({
       if (!files.length) return;
       await store.update(sessionID, async (state) => {
         const active = activate(state);
-        if (!edit || writeGate(active)) return active;
+        if (!edit || active.stage === "STOPPED" || writeGate(active)) return active;
         const call = new Map<string, Snapshot>();
         for (const file of files) {
           let path = file;

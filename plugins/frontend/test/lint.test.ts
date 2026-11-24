@@ -5,6 +5,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { lintShell, lintUi } from "../src/lint.ts";
 
+test("frontend lint ignores TSX imports and markup", () => {
+  assert.deepEqual(lintUi('import "basecoat-css/all";\nimport "basecoat-css/tabs";\n<button />', "Page.tsx"), []);
+});
+
+test("frontend lint ignores markup in Vue and Svelte components", () => {
+  for (const path of ["Page.vue", "Page.svelte"]) {
+    assert.deepEqual(lintUi("<button></button>", path), []);
+  }
+});
+
 test("shell lint identifies the deprecated CLI without flagging basecoat-css", () => {
   assert.match(lintShell("npx basecoat-cli@latest install")[0], /BC001/);
   assert.deepEqual(lintShell("npm install basecoat-css"), []);
@@ -16,7 +26,6 @@ test("mixed Basecoat script loads are flagged, but a runtime with component scri
   assert.deepEqual(lintUi(all + component, "index.html").map((warning) => warning.rule), ["BC002"]);
   assert.deepEqual(lintUi('<script src="/assets/js/basecoat.min.js"></script>' + component, "index.html"), []);
   assert.deepEqual(lintUi(`<script type="module">import "basecoat-css/all";\nimport "basecoat-css/tabs";</script>`, "index.html").map((warning) => warning.rule), ["BC002"]);
-  assert.deepEqual(lintUi(`import "basecoat-css/all";\nimport "basecoat-css/tabs";`, "page.tsx").map((warning) => warning.rule), ["BC002"]);
 });
 
 test("HTML lint reports unactionable markup with line numbers", () => {

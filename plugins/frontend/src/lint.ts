@@ -3,6 +3,7 @@
 
 import { DomUtils, parseDocument } from "htmlparser2";
 import { isTag } from "domhandler";
+import { isUiPath } from "./targets.ts";
 
 export interface Diagnostic { line: number; rule: string; message: string }
 
@@ -16,7 +17,7 @@ const mixedBundle = /(?:^|\/)basecoat-css(?:@[^/]+)?\/(?:dist\/js\/)?all(?:\.min
 const individualBundle = /(?:^|\/)basecoat-css(?:@[^/]+)?\/(?:dist\/js\/)?(?:basecoat|accordion|carousel|code-block|combobox|command|dropdown-menu|drawer|input-otp|popover|range|select|sidebar|tabs|toast)(?:\.min)?(?:\.js)?(?:$|[?#])|(?:^|\/)js\/(?:basecoat|accordion|carousel|code-block|combobox|command|dropdown-menu|drawer|input-otp|popover|range|select|sidebar|tabs|toast)(?:\.min)?\.js(?:$|[?#])/i;
 
 export function lintUi(source: string, path: string): Diagnostic[] {
-  if (/\.css$/i.test(path)) return [];
+  if (!isUiPath(path) || /\.css$/i.test(path)) return [];
 
   // Match source offsets while removing template comments and non-markup code.
   const markup = source.replace(/\{#[\s\S]*?#\}|\{%[\s\S]*?%\}/g, (part) => part.replace(/[^\n]/g, " "));
@@ -33,13 +34,8 @@ export function lintUi(source: string, path: string): Diagnostic[] {
   const scripts = tags.filter((tag) => tag.name === "script");
   const imports = (code: string) => [...code.matchAll(/(?:\bimport\s*(?:\([^)]*?\s*|[^;\n]*?\s+from\s+)?|\bexport\s+[^;\n]*?\s+from\s+)["'](basecoat-css\/[^"']+)["']/g)].map((match) => match[1]);
   const sources = scripts.flatMap((tag) => [tag.attribs.src ?? "", ...imports(DomUtils.textContent(tag))]);
-  if (/\.tsx$/i.test(path)) sources.push(...imports(markup));
-  if (sources.some((src) => mixedBundle.test(src)) && sources.some((src) => individualBundle.test(src))) {
-    if (scripts.length) {
-      add(scripts[0], "BC002", "Use the Basecoat all-in-one bundle or the runtime and individual scripts, not both.");
-    } else {
-      warnings.push({ line: 1, rule: "BC002", message: "Use the Basecoat all-in-one bundle or individual imports, not both." });
-    }
+  if (scripts.length && sources.some((src) => mixedBundle.test(src)) && sources.some((src) => individualBundle.test(src))) {
+    add(scripts[0], "BC002", "Use the Basecoat all-in-one bundle or the runtime and individual scripts, not both.");
   }
 
   const ids = new Set(tags.map((tag) => tag.attribs.id).filter(Boolean));

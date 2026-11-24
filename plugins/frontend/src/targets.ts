@@ -1,7 +1,7 @@
 // Copyright (c) 2026 John Anthony Mariquit <john@mariquit.com>
 // SPDX-License-Identifier: Apache-2.0
 
-export const isUiPath = (path: string): boolean => /\.(html|jinja|njk|tsx|vue|svelte|css)$/i.test(path);
+export const isUiPath = (path: string): boolean => /\.(astro|html|jinja|njk|css)$/i.test(path);
 
 const record = (input: unknown): Record<string, unknown> =>
   input && typeof input === "object" ? input as Record<string, unknown> : {};
