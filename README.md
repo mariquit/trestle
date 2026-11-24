@@ -36,6 +36,7 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | [pre-flight](pre-flight.md) `v0.1.0` | `/pre-flight`<br>`"audit these changes"` | **Blast-Radius Analysis.** Audits the boundary between your git diff and the rest of the codebase to catch broken invariants and unseen caller regressions. |
 | [regression-test](regression-test.md) `v0.1.0` | `/regression-test`<br>`"write a test that proves this fix"` | **Isolated Regression Proof.** Runs the same regression test against explicit unfixed and fixed refs in separate worktrees, then records the verdict. |
 | [release-size](release-size.md) `v0.1.0` | `/release-size`<br>`"reduce this release artifact size"` | **Measured Release Optimization.** Compares exact bytes for one shipped artifact built through the release pipeline. Counts savings as verified only after checking affected behavior from the packaged deliverable on the target. |
+| [scaffold](scaffold.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/scaffold`<br>`"choose a stack"` | **Stack Selection.** Recommends a stack for a site, app, or API based on requirements, hosting constraints, and what the project can reuse. |
 | [spike](spike.md) `v0.1.0` | `/spike`<br>`"prove this with a small experiment"` | **Timeboxed Experimentation.** Tests one falsifiable architectural hypothesis outside the active checkout. Keeps the evidence and reproduction steps, not the prototype. |
 | [tech-writer](tech-writer.md) `v0.1.0` | `/tech-writer`<br>`"refine technical source data"` | **Technical Data Editing.** Rephrases conversational fluff and enriches hyper-terse content in `.json`, `.yaml`, and `.md` source files to meet Operational Completeness standards while preserving schema integrity. |
 | [terse](terse.md) `v0.1.0` | `/terse [on \| off \| <task>]`<br>`"switch to terse mode"` | **Execution Mode Control.** Toggles high-density, direct agent execution mode. Bypasses preambles, outputs atomic changes, and enforces concise terminal communication. |
@@ -49,7 +50,7 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 ```sh
 ./install.sh                         # Open the selection menu
 ./install.sh dive-deep hand-over     # Install specific skills
-./install.sh --all                   # Install all 16 skills
+./install.sh --all                   # Install all 17 skills
 ./install.sh --upgrade dive-deep     # Back up and replace a differing install
 ```
 
@@ -79,7 +80,7 @@ These skills act as modular power tools invoked at specific stages of the Softwa
 
 - **Planning, Architecture & Design:** Use `/dive-deep` to resolve requirements before implementation, `/spike` to test an architectural unknown, and `/adr` to record the decision and its trade-offs.
 - **Debugging & Investigation:** Run `/triage` at the start of a complex incident to enforce a hypothesis-driven freeze before changing code.
-- **Implementation & Refactoring:** Use `/integration-seam` to justify a boundary and verify it through the real caller, `/frontend` for HTML-first apps, `/frontend-react` for Vite + React interfaces, `/terse` for concise execution, `/de-slop` to edit prose or `--review` to audit it without editing, and `/tech-writer` to refine technical source files.
+- **Implementation & Refactoring:** Use `/scaffold` to choose a stack for a new site, app, or API; `/integration-seam` to justify a boundary and verify it through the real caller; `/frontend` for HTML-first apps; `/frontend-react` for Vite + React interfaces; `/terse` for concise execution; `/de-slop` to edit prose or `--review` to audit it without editing; and `/tech-writer` to refine technical source files.
 - **Testing & Pre-PR Audit:** Use `/regression-test` to prove a fix against unfixed and fixed refs in separate worktrees, and `/pre-flight` to check the blast radius of a change beyond the diff.
 - **Release:** Use `/release-size` to measure and verify changes to a shipped artifact.
 - **Session Continuity & Knowledge Preservation:** Use `/what-is-next` to pick one finish-first action, `/hand-over` to save or resume work in progress, and `/deconstruct` to turn a completed investigation into a reusable playbook.
@@ -106,6 +107,7 @@ graph TD
             Vite[Vite and React UI] --> ReactUI[/"/frontend-react"\]
             Q[Technical Source Files & Runbooks] --> R[/"/tech-writer"\]
             Caller[Integration Boundary] --> Seam[/"/integration-seam"\]
+            Slice[Technology Stack Decision] --> Scaffold[/"/scaffold"\]
         end
 
         subgraph S4 ["Testing & Pre-PR Audit"]
@@ -125,7 +127,7 @@ graph TD
     end
 
     classDef skill fill:#1fa9d7,stroke:#bae6fd,stroke-width:2px,color:#fff;
-    class B,D,F,H,J,L,N,P,R,ReactUI,DiveDeep,Spike,Seam,ReleaseSize,WhatIsNext,HandOver skill;
+    class B,D,F,H,J,L,N,P,R,ReactUI,DiveDeep,Spike,Seam,Scaffold,ReleaseSize,WhatIsNext,HandOver skill;
 
     style SDLC fill:none,stroke:#334155,stroke-width:1px,stroke-dasharray: 5 5,color:#9ba5b1
 

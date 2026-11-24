@@ -12,3 +12,9 @@ under Creative Commons Attribution 4.0 International
 Trestle adapted the reporting and moderation instructions. The Contributor
 Covenant credits Mozilla's code of conduct enforcement ladder as inspiration
 for its Community Impact Guidelines.
+
+## Skill Prior Art
+
+`scaffold.md` draws on technical ideas from John Anthony Mariquit's local
+`polyglot-scaffold/SKILL.md` (GPL-3.0-or-later) and `AGENTS.md.disabled`.
+It does not reproduce their prose or code examples.

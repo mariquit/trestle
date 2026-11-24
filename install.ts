@@ -14,8 +14,8 @@ import { parseArgs } from "node:util";
 const ROOT = import.meta.dirname;
 const CATALOG = [
   "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "frontend-react", "hand-over",
-  "integration-seam", "pre-flight", "regression-test", "release-size", "spike",
-  "tech-writer", "terse", "triage", "what-is-next",
+  "integration-seam", "pre-flight", "regression-test", "release-size", "scaffold",
+  "spike", "tech-writer", "terse", "triage", "what-is-next",
 ];
 const PLUGINS = new Map([
   ["frontend", ["src/lint.ts", "src/state.ts", "src/store.ts", "src/targets.ts"]],
