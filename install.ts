@@ -13,9 +13,9 @@ import { parseArgs } from "node:util";
 
 const ROOT = import.meta.dirname;
 const CATALOG = [
-  "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "frontend-react", "hand-over",
-  "integration-seam", "pre-flight", "regression-test", "release-size", "scaffold",
-  "spike", "tech-writer", "terse", "triage", "what-is-next",
+  "adr", "de-slop", "deconstruct", "dive-deep", "frontend", "frontend-react", "github-pr-review",
+  "hand-over", "improve", "integration-seam", "post-mortem", "pre-flight", "regression-test",
+  "release-size", "scaffold", "spike", "tech-writer", "terse", "triage", "what-is-next",
 ];
 const PLUGINS = new Map([
   ["frontend", ["src/lint.ts", "src/state.ts", "src/store.ts", "src/targets.ts"]],
@@ -231,6 +231,10 @@ function install(root: string, names: string[], upgrade: boolean): void {
     for (const name of ["lint.mjs", "THIRD-PARTY-LICENSES.txt"]) {
       deSlop.set(`scripts/${name}`, readFileSync(join(ROOT, "tools/de-slop/bundle", name)));
     }
+  }
+  const postMortem = packages.get("post-mortem");
+  if (postMortem) {
+    postMortem.set("assets/report.html", readFileSync(join(ROOT, "assets/report.html")));
   }
   const groups: InstallGroup[] = [{ root, packages }];
   const pluginRoot = plugins.size ? destination(join(configRoot(), "plugins")) : undefined;

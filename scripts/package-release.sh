@@ -18,6 +18,7 @@ for skill in $skills; do
     set -- "$@" "$skill.md"
 done
 tar -czf "$out/trestle-install.tar.gz" "$@" \
+    assets/report.html \
     plugins/frontend/package.json plugins/frontend/package-lock.json plugins/frontend/README.md plugins/frontend/src \
     plugins/frontend-react/package.json plugins/frontend-react/package-lock.json plugins/frontend-react/README.md plugins/frontend-react/src \
     tools/de-slop/bundle/lint.mjs tools/de-slop/bundle/THIRD-PARTY-LICENSES.txt

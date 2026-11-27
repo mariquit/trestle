@@ -43,6 +43,8 @@ function fixture(t: TestContext) {
     });
   }
   cpSync(join(ROOT, "tools/de-slop/bundle"), join(root, "tools/de-slop/bundle"), { recursive: true });
+  mkdirSync(join(root, "assets"));
+  copyFileSync(join(ROOT, "assets/report.html"), join(root, "assets/report.html"));
 
   const skills = join(temp, "OpenCode skills");
   const npmLog = join(temp, "npm.log");
@@ -112,6 +114,7 @@ test("installer --all uses the XDG destination and accepts a directory override"
     .map((name) => basename(name, ".md")).filter((name) => !docs.has(name));
   const skills = join(xdg, "opencode/skills");
   assert.deepEqual(new Set(readdirSync(skills)), new Set(expected));
+  assert.deepEqual(readFileSync(join(skills, "post-mortem/assets/report.html")), readFileSync(join(root, "assets/report.html")));
   for (const name of ["frontend", "frontend-react"]) {
     assert.ok(statSync(join(xdg, "opencode/plugins", name, "src/index.ts")).isFile());
     assert.ok(!existsSync(join(skills, name, "plugin")));
@@ -240,6 +243,10 @@ copyFileSync(join(process.env.TEST_ASSETS, url.pathname.split("/").pop()), args[
   assert.ok(!existsSync(env.XDG_CONFIG_HOME!));
   writeFileSync(checksum, complete);
   stream([]);
+  for (const name of ["github-pr-review", "improve", "post-mortem"]) {
+    assert.deepEqual(readFileSync(join(skills, name, "SKILL.md")), readFileSync(join(ROOT, `${name}.md`)));
+  }
+  assert.deepEqual(readFileSync(join(skills, "post-mortem/assets/report.html")), readFileSync(join(ROOT, "assets/report.html")));
   for (const name of ["frontend", "frontend-react"]) {
     assert.ok(statSync(join(skills, name, "SKILL.md")).isFile());
     assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins", name, "node_modules/zod/package.json")).isFile());

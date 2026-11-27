@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- Copyright (c) 2026 John Anthony Mariquit <john@mariquit.com> -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incident post-mortem</title>
+  <style>
+    :root { color-scheme: light dark; font: 1rem/1.6 system-ui, sans-serif; }
+    body { max-width: 72ch; margin: 0 auto; padding: 1.5rem; overflow-wrap: anywhere; }
+    nav, section { border-block-start: 1px solid GrayText; margin-block-start: 1.5rem; }
+    h1, h2 { line-height: 1.25; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid GrayText; padding: .5rem; text-align: start; vertical-align: top; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Incident post-mortem</h1>
+    <!-- Add the incident identifier and the relevant reporting window. -->
+  </header>
+  <nav aria-label="Report sections">
+    <ol>
+      <li><a href="#root-cause">Root Cause Summary</a></li>
+      <li><a href="#findings">Findings</a></li>
+      <li><a href="#commit-history">Commit History</a></li>
+      <li><a href="#evidence">Evidence</a></li>
+      <li><a href="#analysis">Analysis</a></li>
+      <li><a href="#prevention">What could have prevented the outage</a></li>
+      <li><a href="#follow-up">Follow-up and remaining exposure</a></li>
+    </ol>
+  </nav>
+  <main>
+    <section id="root-cause">
+      <h2>Root Cause Summary</h2>
+      <!-- State the mechanism and its most important qualification. -->
+    </section>
+    <section id="findings">
+      <h2>Findings</h2>
+      <!-- Record confirmed, revised, and new findings. -->
+    </section>
+    <section id="commit-history">
+      <h2>Commit History</h2>
+      <!-- Link to full revisions and explain what role each played. -->
+    </section>
+    <section id="evidence">
+      <h2>Evidence</h2>
+      <!-- Link to the sources for key comparisons, timestamps, and excerpts. -->
+    </section>
+    <section id="analysis">
+      <h2>Analysis</h2>
+      <!-- Separate observations from inferences and unresolved questions. -->
+    </section>
+    <section id="prevention">
+      <h2>What could have prevented the outage</h2>
+      <!-- Tie each proposed control to the failure step it could interrupt. -->
+    </section>
+    <section id="follow-up">
+      <h2>Follow-up and remaining exposure</h2>
+      <!-- Date the status of remediation, adoption, and production validation. -->
+    </section>
+  </main>
+</body>
+</html>

@@ -31,8 +31,11 @@ See [Structural](https://john.mariquit.com/#tools) for a map of these tools and 
 | [dive-deep](dive-deep.md) `v0.1.0` | `/dive-deep`<br>`"interrogate this brief before we build"` | **Requirements Discovery.** Asks one consequential question per turn before implementation. Records agreed requirements, non-goals, and observable acceptance criteria without turning open decisions into defaults. |
 | [frontend](frontend.md) `v0.2.0` | `/frontend`<br>`"design a mobile-friendly web interface"` | **Frontend Design.** For HTML-first sites and apps such as [Astro](https://astro.build/) and [FastHTML](https://fastht.ml/). Uses [Basecoat UI](https://basecoatui.com/introduction/) when no design system is established. React, Vue, and Svelte are out of scope. Requires the [OpenCode V2 plugin](plugins/frontend/README.md) for session checkpoints and post-edit lint. |
 | [frontend-react](frontend-react.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/frontend-react`<br>`"design a Vite React interface"` | **Vite + React Design.** Uses standard [shadcn/ui](https://ui.shadcn.com/docs) and requires the [OpenCode V2 plugin](plugins/frontend-react/README.md) for discovery, planning, and verification. Other React frameworks and routers are out of scope. |
+| [github-pr-review](github-pr-review.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/github-pr-review`<br>`"review this GitHub PR"` | **Pull Request Review.** Reviews a GitHub PR or local branch diff and returns a verdict, prioritized findings, and verification gaps. Does not post to GitHub unless asked. |
 | [hand-over](hand-over.md) `v0.1.0` | `/hand-over`<br>`"hand this work over to a fresh session"` | **Session Continuity.** Saves work in progress, decisions, and verification evidence in a versioned checkpoint. Checks the revision and file contents for drift without changing the checkout before resuming. |
+| [improve](improve.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/improve`<br>`"sharpen this prompt"` | **Prompt Refinement & Scoped Execution.** Sharpens a prompt without executing it, or executes a requested task within scope and reports what was verified. |
 | [integration-seam](integration-seam.md) `v0.1.0` | `/integration-seam`<br>`"prove this integration through its caller"` | **Boundary Justification.** Keeps the capability in-process unless a concrete constraint requires a new boundary. Defines the contract and verifies both success and a meaningful failure through the real caller. |
+| [post-mortem](post-mortem.md) ![New](https://img.shields.io/badge/New-brightgreen) `v0.1.0` | `/post-mortem`<br>`"investigate this incident"` | **Incident Investigation.** Correlates incident records, deployments, commits, and telemetry in a standalone HTML report that separates evidence from inference and tracks remediation. |
 | [pre-flight](pre-flight.md) `v0.1.0` | `/pre-flight`<br>`"audit these changes"` | **Blast-Radius Analysis.** Audits the boundary between your git diff and the rest of the codebase to catch broken invariants and unseen caller regressions. |
 | [regression-test](regression-test.md) `v0.1.0` | `/regression-test`<br>`"write a test that proves this fix"` | **Isolated Regression Proof.** Runs the same regression test against explicit unfixed and fixed refs in separate worktrees, then records the verdict. |
 | [release-size](release-size.md) `v0.1.0` | `/release-size`<br>`"reduce this release artifact size"` | **Measured Release Optimization.** Compares exact bytes for one shipped artifact built through the release pipeline. Counts savings as verified only after checking affected behavior from the packaged deliverable on the target. |
@@ -50,7 +53,7 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 ```sh
 ./install.sh                         # Open the selection menu
 ./install.sh dive-deep hand-over     # Install specific skills
-./install.sh --all                   # Install all 17 skills
+./install.sh --all                   # Install all 20 skills
 ./install.sh --upgrade dive-deep     # Back up and replace a differing install
 ```
 
@@ -80,11 +83,11 @@ Skills are grouped by what they primarily deliver, not by when they can be used.
 
 - **Requirements & Architecture:** Use `/dive-deep` to agree on requirements and acceptance criteria, `/scaffold` to recommend a technology stack, `/spike` to resolve an architectural unknown with a throwaway experiment, and `/adr` to record a decision and its trade-offs.
 - **Frontend Design & Implementation:** Use `/frontend` for HTML-first interfaces and `/frontend-react` for Vite + React interfaces. Both guide design, implementation, and verification of the rendered UI.
-- **Debugging & Investigation:** Use `/triage` to isolate a bug's cause through read-only diagnostics before changing code.
-- **Integration, Testing & Review:** Use `/integration-seam` to justify a boundary, define its contract, wire it, and verify success and failure through the real caller. Use `/regression-test` to prove a fix against unfixed and fixed refs, and `/pre-flight` to audit spec alignment and effects beyond the diff.
+- **Debugging & Investigation:** Use `/triage` to isolate a bug's cause through read-only diagnostics before changing code. Use `/post-mortem` to reconstruct an incident from deployment and runtime evidence and document findings and follow-up in a local HTML report.
+- **Integration, Testing & Review:** Use `/integration-seam` to justify a boundary, define its contract, wire it, and verify success and failure through the real caller. Use `/regression-test` to prove a fix against unfixed and fixed refs, `/pre-flight` to audit spec alignment and effects beyond the diff, and `/github-pr-review` to return prioritized findings and a merge recommendation for a PR or local branch.
 - **Release Engineering:** Use `/release-size` to reduce one packaged artifact and verify its behavior on the target.
 - **Documentation & Knowledge Capture:** Use `/de-slop` to edit or audit prose, `/tech-writer` to clarify technical instructions without changing their schema, and `/deconstruct` to turn a completed investigation into a reusable playbook.
-- **Task & Session Workflow:** Use `/what-is-next` to recommend the next action without executing it, `/hand-over` to save or resume a checkpoint with drift checks, and `/terse` to change the agent's execution and communication mode across domains.
+- **Task & Session Workflow:** Use `/improve` to sharpen a prompt or execute a scoped task with verification, `/what-is-next` to recommend the next action without executing it, `/hand-over` to save or resume a checkpoint with drift checks, and `/terse` to change the agent's execution and communication mode across domains.
 
 ```mermaid
 graph TD
@@ -105,12 +108,14 @@ graph TD
 
         subgraph S2 ["Debugging & Investigation"]
             C[Complex Bug Reported] --> D[/"/triage"\]
+            Incident[Incident Evidence and Remediation] --> PostMortem[/"/post-mortem"\]
         end
 
         subgraph S4 ["Integration, Testing & Review"]
             Caller[Boundary Contract and Caller Verification] --> Seam[/"/integration-seam"\]
             I[Regression Proof Across Two Refs] --> J[/"/regression-test"\]
             K[Pre-PR Change Audit] --> L[/"/pre-flight"\]
+            PullRequest[Pull Request Review] --> PRReview[/"/github-pr-review"\]
         end
 
         subgraph S5 ["Release Engineering"]
@@ -124,6 +129,7 @@ graph TD
         end
 
         subgraph S6 ["Task & Session Workflow"]
+            Prompt[Prompt Refinement or Scoped Execution] --> Improve[/"/improve"\]
             Priority[Next Action Recommendation] --> WhatIsNext[/"/what-is-next"\]
             Checkpoint[Work-in-Progress Checkpoint] --> HandOver[/"/hand-over"\]
             E[Agent Execution Mode] --> F[/"/terse"\]
@@ -131,7 +137,7 @@ graph TD
     end
 
     classDef skill fill:#1fa9d7,stroke:#bae6fd,stroke-width:2px,color:#fff;
-    class B,D,F,H,J,L,N,P,R,ReactUI,DiveDeep,Spike,Seam,Scaffold,ReleaseSize,WhatIsNext,HandOver skill;
+    class B,D,F,H,J,L,N,P,R,ReactUI,DiveDeep,Spike,Seam,Scaffold,ReleaseSize,WhatIsNext,HandOver,Improve,PostMortem,PRReview skill;
 
     style SDLC fill:none,stroke:#334155,stroke-width:1px,stroke-dasharray: 5 5,color:#9ba5b1
 
