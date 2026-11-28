@@ -12,13 +12,9 @@ metadata:
 ### Mode A: Sharpen Prompt (No Execution Yet)
 Use when the user gives a rough request, asks to sharpen/rewrite a prompt, or wants a deeper framing before work starts.
 
-1. **Diagnose (4 brief points):**
-   - **Pro gap:** What a top practitioner in this field would do that the request omits.
-   - **Raw material:** The rawest primary source or data to start from instead of pre-digested summaries.
-   - **Methods & tools:** Specific methods, commands, or tools to use.
-   - **External proof:** What outside the user or agent proves the result works.
-2. **Rewrite the prompt:** Output a sharper, deeper version of the task without expanding it into a bloated spec.
-3. **Separate decisions:** Instruct the execution pass to prototype choices an experiment can settle and recommend an option from observed results, while surfacing product or taste choices that no experiment can settle for the user to decide.
+1. **Diagnose only consequential gaps.** Identify omissions that affect the requested outcome: a missing constraint, primary source, method, or observable check. Skip categories that add nothing. Keep useful but optional ideas outside the rewritten prompt, labeled as optional rather than as execution instructions.
+2. **Rewrite the prompt for a fresh agent.** Preserve the deliverable, constraints, exclusions, and acceptance criteria. Do not invent requirements or turn uncertain choices into defaults. Put the scope, verification, and stop rules below inside the rewritten prompt, tailored to the task. Do not assume the receiving agent can see this skill or the diagnosis.
+3. **Separate decisions only when needed.** Prefer inspection or an existing check over a prototype. Include a small experiment only if a material in-scope choice cannot be resolved that way. Leave consequential product or taste choices to the user rather than deciding them silently.
 
 Stop here in Mode A unless the user explicitly asks to execute the sharpened prompt.
 
@@ -31,12 +27,18 @@ Use when the user asks to implement, run, fix, or analyze a task directly, or as
    - **Failure modes & invariants:** Bad inputs, edge cases, or silent bugs to guard against, and invariants that must hold.
    - **Evidence vs. guess:** Facts or APIs assumed from memory vs. verified in the workspace/docs.
    - **Proof & pass/fail signal:** How the result will be checked and the exact pass/fail condition.
-2. **Scoped Execution:** Build or execute only the smallest deliverable that satisfies the request. If an empirical choice is unsettled and testable, run a quick prototype/check and recommend the observed winner; surface non-empirical product/taste choices rather than guessing.
+2. **Scoped Execution:** Apply the scope, verification, and stop rules below. Inspect first. Prototype only if a material in-scope choice cannot be resolved by inspection or an existing check. Surface consequential product or taste choices rather than guessing.
 3. **Post-Execution Verification Audit:** Before the final conclusion, report:
-   - **Pass / Fail Verdict:** Explicit `PASS` or `FAIL` based on observed results.
+   - **Verdict:** Report `PASS` or `FAIL` against observed checks. Report `UNVERIFIED` if required evidence is unavailable and no observed result establishes a failure.
    - **Observed Evidence:** Exact commands, tests, inspections, or dry runs performed and what they showed (or note clearly if execution tools were unavailable).
    - **Unverified Gaps & Residual Risks:** What was not tested or still relies on assumptions.
-   - **Scope Drift Check:** Confirm whether any unrequested edits or abstractions were added.
+   - **Scope Drift Check:** Compare the result with the request, including changed files when applicable. Report any deviation.
+
+## Scope, verification, and stop rules
+
+Deliver only the requested outcome. Preserve stated constraints and existing behavior outside the requested scope. Prefer the simplest complete approach that fits the project and reuse existing patterns. Do not add unrequested features, abstractions, dependencies, or unrelated cleanup. Report unrelated issues without fixing them.
+
+If meeting the request requires expanding its scope, explain why and ask before doing that work. Complete any independent in-scope work. Use the smallest meaningful verification that checks the requested outcome. Report what you observed and what remains unverified. Stop once the deliverable and relevant checks are complete, or report what is blocked and why.
 
 ## Guardrails
 - Never claim a check passed unless it was actually run and observed.
