@@ -1,6 +1,6 @@
 # Project: Trestle
 
-A collection of verification-focused `SKILL.md` specifications designed for OpenCode.
+Trestle gives you reusable workflows in OpenCode to turn rough briefs into actionable plans, build and review changes, investigate failures, and carry decisions and context into future sessions.
 
 ```text
   ┌───┬───┬───┬───┬───┬───┬───┐
