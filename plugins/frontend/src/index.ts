@@ -91,7 +91,7 @@ export default Plugin.define({
         },
       });
       editor.add({
-        name: "submit_plan",
+        name: "submit_frontend_plan",
         description: "Declare the frontend layout, mobile reading order, component contracts, and state handling before editing UI files.",
         input: z.toJSONSchema(planInput),
         execute: async (input, { sessionID }) => {

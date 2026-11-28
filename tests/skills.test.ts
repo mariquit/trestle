@@ -116,7 +116,7 @@ test("installer --all uses the XDG destination and accepts a directory override"
   assert.deepEqual(new Set(readdirSync(skills)), new Set(expected));
   assert.deepEqual(readFileSync(join(skills, "post-mortem/assets/report.html")), readFileSync(join(root, "assets/report.html")));
   for (const name of ["frontend", "frontend-react"]) {
-    assert.ok(statSync(join(xdg, "opencode/plugins", name, "src/index.ts")).isFile());
+    assert.ok(statSync(join(xdg, "opencode/trestle-plugins", name, "src/index.ts")).isFile());
     assert.ok(!existsSync(join(skills, name, "plugin")));
   }
   const override = join(temp, "override");
@@ -161,8 +161,12 @@ test("installer refuses an existing destination lock", (t) => {
 
 test("installer installs the frontend plugin and skips an unchanged reinstall", (t) => {
   const { root, env, npmLog, install } = fixture(t);
-  const plugin = join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend");
-  assert.ok(install(["frontend"]).includes(`Frontend plugin: ${plugin}`));
+  const config = join(env.XDG_CONFIG_HOME!, "opencode");
+  const plugin = join(config, "trestle-plugins/frontend");
+  const loader = join(config, "plugins/trestle-frontend.ts");
+  assert.ok(install(["frontend"]).includes(`Frontend plugin: ${loader}`));
+  assert.match(readFileSync(loader, "utf8"), /export \{ default \} from "\.\.\/trestle-plugins\/frontend\/src\/index\.ts";/);
+  assert.ok(!existsSync(join(config, "plugins/frontend")));
   for (const name of ["package.json", "package-lock.json", "src/index.ts", "src/state.ts"]) {
     assert.deepEqual(readFileSync(join(plugin, name)), readFileSync(join(root, "plugins/frontend", name)));
   }
@@ -174,8 +178,12 @@ test("installer installs the frontend plugin and skips an unchanged reinstall", 
 
 test("installer bundles frontend-react with its required plugin and locked dependencies", (t) => {
   const { root, skills, env, npmLog, install } = fixture(t);
-  const plugin = join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend-react");
-  assert.ok(install(["frontend-react"]).includes(`Frontend React plugin: ${plugin}`));
+  const config = join(env.XDG_CONFIG_HOME!, "opencode");
+  const plugin = join(config, "trestle-plugins/frontend-react");
+  const loader = join(config, "plugins/trestle-frontend-react.ts");
+  assert.ok(install(["frontend-react"]).includes(`Frontend React plugin: ${loader}`));
+  assert.match(readFileSync(loader, "utf8"), /export \{ default \} from "\.\.\/trestle-plugins\/frontend-react\/src\/index\.ts";/);
+  assert.ok(!existsSync(join(config, "plugins/frontend-react")));
   assert.deepEqual(readFileSync(join(skills, "frontend-react/SKILL.md")), readFileSync(join(root, "frontend-react.md")));
   for (const path of ["package.json", "package-lock.json", "README.md", "src/index.ts", "src/project.ts", "src/state.ts"]) {
     assert.deepEqual(readFileSync(join(plugin, path)), readFileSync(join(root, "plugins/frontend-react", path)));
@@ -191,12 +199,18 @@ test("global plugin conflicts are checked before publishing either skill or plug
   const plugin = join(config, "plugins/frontend-react");
   mkdirSync(plugin, { recursive: true });
   writeFileSync(join(plugin, "package.json"), '{"name":"local-plugin"}');
+  const unrelated = join(config, "plugins/unrelated.ts");
+  writeFileSync(unrelated, "export default {};\n");
   writeFileSync(join(config, "opencode.jsonc"), '{\n  // Leave this file alone.\n  "plugins": [],\n}\n');
   assert.match(install(["frontend", "frontend-react"], 1), /Use --upgrade/);
   assert.deepEqual(readdirSync(skills), []);
-  assert.deepEqual(readdirSync(join(config, "plugins")), ["frontend-react"]);
+  assert.deepEqual(readdirSync(join(config, "plugins")).sort(), ["frontend-react", "unrelated.ts"]);
   const backup = backupFrom(install(["--upgrade", "frontend", "frontend-react"]), "frontend-react");
   assert.equal(readFileSync(join(backup, "package.json"), "utf8"), '{"name":"local-plugin"}');
+  assert.ok(!existsSync(plugin));
+  assert.ok(statSync(join(config, "plugins/trestle-frontend.ts")).isFile());
+  assert.ok(statSync(join(config, "plugins/trestle-frontend-react.ts")).isFile());
+  assert.equal(readFileSync(unrelated, "utf8"), "export default {};\n");
   assert.equal(readFileSync(join(config, "opencode.jsonc"), "utf8"), '{\n  // Leave this file alone.\n  "plugins": [],\n}\n');
   assert.ok(!existsSync(join(config, "opencode.json")));
 });
@@ -216,7 +230,7 @@ test("an upgrade preserves the legacy nested plugin and installs the required gl
   writeFileSync(join(legacy, "index.ts"), "previous plugin");
   install(["frontend", "--upgrade"]);
   assert.equal(readFileSync(join(legacy, "index.ts"), "utf8"), "previous plugin");
-  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend/src/index.ts")).isFile());
+  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/trestle-plugins/frontend/src/index.ts")).isFile());
 });
 
 test("streamed launcher verifies release assets before installing", (t) => {
@@ -249,7 +263,8 @@ copyFileSync(join(process.env.TEST_ASSETS, url.pathname.split("/").pop()), args[
   assert.deepEqual(readFileSync(join(skills, "post-mortem/assets/report.html")), readFileSync(join(ROOT, "assets/report.html")));
   for (const name of ["frontend", "frontend-react"]) {
     assert.ok(statSync(join(skills, name, "SKILL.md")).isFile());
-    assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins", name, "node_modules/zod/package.json")).isFile());
+    assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/trestle-plugins", name, "node_modules/zod/package.json")).isFile());
+    assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins", `trestle-${name}.ts`)).isFile());
   }
   assert.match(stream(["frontend-react"]), /Unchanged: plugin frontend-react/);
   assert.ok(!readdirSync(temp).some((name) => name.startsWith("trestle-release.")));
@@ -266,7 +281,7 @@ test("installer publishes nothing when frontend dependency installation fails", 
   assert.ok(!existsSync(join(old, "plugin")));
   const backup = backupFrom(install(["--upgrade", "frontend"]), "frontend");
   assert.equal(readFileSync(join(backup, "SKILL.md"), "utf8"), "previous install");
-  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/plugins/frontend/src/index.ts")).isFile());
+  assert.ok(statSync(join(env.XDG_CONFIG_HOME!, "opencode/trestle-plugins/frontend/src/index.ts")).isFile());
 });
 
 test("installer refuses a symlinked frontend plugin", (t) => {

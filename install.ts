@@ -97,15 +97,27 @@ function destination(requested: string): string {
   return root;
 }
 
-type InstallGroup = { root: string; packages: Map<string, Package>; plugins?: boolean };
+type InstallGroup = { root: string; packages: Map<string, Package>; plugins?: boolean; loaders?: boolean };
 
-function prepare({ root, packages, plugins }: InstallGroup, upgrade: boolean): string[] {
+function prepare({ root, packages, plugins, loaders }: InstallGroup, upgrade: boolean): string[] {
   const changed: string[] = [];
   for (const [name, files] of packages) {
     const path = join(root, name);
     const backup = `${path}.skshbak`;
     if (info(backup)) throw new Error(`Legacy live-link backup exists: ${backup}. See CONTRIBUTING.md for recovery.`);
     const existing = info(path);
+    if (loaders) {
+      if (!files.size) {
+        if (!existing) continue;
+        if (!existing.isDirectory()) throw new Error(`Refusing to replace a symlink or non-directory: ${path}`);
+      } else if (existing) {
+        if (!existing.isFile()) throw new Error(`Refusing to replace a symlink or non-file: ${path}`);
+        if (readFileSync(path).equals(files.get("")!)) continue;
+      }
+      if (existing && !upgrade) throw new Error(`Different or incomplete installation: ${path}. Use --upgrade to replace it with a backup.`);
+      changed.push(name);
+      continue;
+    }
     if (existing) {
       if (!existing.isDirectory()) throw new Error(`Refusing to replace a symlink or non-directory: ${path}`);
       const legacyPlugin = !plugins && PLUGINS.has(name) && info(join(path, "plugin"));
@@ -157,7 +169,7 @@ function publish(groups: (InstallGroup & { names: string[] })[]): void {
   const undo: (() => void)[] = [];
   const messages: string[] = [];
   try {
-    for (const { root, names, packages, plugins } of groups) {
+    for (const { root, names, packages, plugins, loaders } of groups) {
       const work = mkdtempSync(join(root, ".trestle-install-"));
       const staged = join(work, "staged");
       const backups = join(work, "previous");
@@ -166,6 +178,11 @@ function publish(groups: (InstallGroup & { names: string[] })[]): void {
       mkdirSync(backups);
       for (const name of names) {
         const files = packages.get(name)!;
+        if (loaders) {
+          const entry = files.get("");
+          if (entry) writeFileSync(join(staged, name), entry);
+          continue;
+        }
         for (const [filename, contents] of files) {
           const target = join(staged, name, filename);
           mkdirSync(dirname(target), { recursive: true });
@@ -177,7 +194,7 @@ function publish(groups: (InstallGroup & { names: string[] })[]): void {
         }
       }
     }
-    for (const [index, { root, names, plugins }] of groups.entries()) {
+    for (const [index, { root, names, plugins, loaders, packages }] of groups.entries()) {
       const { staged, backups, saved } = workspaces[index];
       for (const name of names) {
         const path = join(root, name);
@@ -186,6 +203,10 @@ function publish(groups: (InstallGroup & { names: string[] })[]): void {
           renameSync(path, backup);
           saved.push(name);
           undo.push(() => renameSync(backup, path));
+        }
+        if (loaders && !packages.get(name)!.size) {
+          messages.push(`Backed up legacy plugin directory: ${path}`);
+          continue;
         }
         renameSync(join(staged, name), path);
         undo.push(() => renameSync(path, join(staged, name)));
@@ -238,7 +259,20 @@ function install(root: string, names: string[], upgrade: boolean): void {
   }
   const groups: InstallGroup[] = [{ root, packages }];
   const pluginRoot = plugins.size ? destination(join(configRoot(), "plugins")) : undefined;
-  if (pluginRoot) groups.push({ root: pluginRoot, packages: plugins, plugins: true });
+  if (pluginRoot) {
+    const payloadRoot = destination(join(configRoot(), "trestle-plugins"));
+    const loaders = new Map<string, Package>();
+    for (const name of plugins.keys()) {
+      // Retire the directory-only layout so OpenCode cannot register the plugin twice.
+      loaders.set(name, new Map());
+      loaders.set(`trestle-${name}.ts`, new Map([["", Buffer.from(
+        `// Copyright (c) 2026 John Anthony Mariquit <john@mariquit.com>\n` +
+        `// SPDX-License-Identifier: Apache-2.0\n\n` +
+        `export { default } from "../trestle-plugins/${name}/src/index.ts";\n`,
+      )]]));
+    }
+    groups.push({ root: payloadRoot, packages: plugins, plugins: true }, { root: pluginRoot, packages: loaders, loaders: true });
+  }
   if (groups.some((a, i) => groups.slice(i + 1).some((b) => a.root === b.root || a.root.startsWith(b.root + sep) || b.root.startsWith(a.root + sep)))) {
     throw new Error("Skill and plugin destinations must not overlap.");
   }
@@ -259,7 +293,7 @@ function install(root: string, names: string[], upgrade: boolean): void {
     if (changed.length) publish(changed);
     if (pluginRoot) for (const name of plugins.keys()) {
       const label = name === "frontend" ? "Frontend plugin" : "Frontend React plugin";
-      console.log(`${label}: ${join(pluginRoot, name)}`);
+      console.log(`${label}: ${join(pluginRoot, `trestle-${name}.ts`)}`);
     }
   } finally {
     for (const lock of locks.reverse()) rmdirSync(lock);

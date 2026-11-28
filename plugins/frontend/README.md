@@ -10,7 +10,7 @@ OpenCode **2.2.5** was tested. With Node.js 24 or later and npm available, run t
 ./install.sh frontend
 ```
 
-Use `./install.sh --upgrade frontend` to replace an older installation. OpenCode V2 discovers the required plugin under `$XDG_CONFIG_HOME/opencode/plugins/frontend`, or `~/.config/opencode/plugins/frontend` if XDG is unset. No config edits are required.
+Use `./install.sh --upgrade frontend` to replace an older installation. OpenCode V2 discovers the required plugin through `$XDG_CONFIG_HOME/opencode/plugins/trestle-frontend.ts`, or `~/.config/opencode/plugins/trestle-frontend.ts` if XDG is unset. No config edits are required.
 
 Open a new session in that project. Ask OpenCode to inspect a UI file, or select the installed `frontend` skill, and check that the next model step shows `1_DISCOVER`. The plugin uses the [OpenCode V2 server SDK](https://opencode.ai/v2/docs/build/plugins/server), not the V1 `@opencode-ai/plugin` hook names.
 
@@ -20,7 +20,7 @@ Open a new session in that project. Ask OpenCode to inspect a UI file, or select
 | --- | --- |
 | `IDLE` | No restrictions until the frontend skill is selected or successfully loaded with the skill tool, or a recognized inspection or edit tool targets a UI file. |
 | `1_DISCOVER` | Call `submit_discovery` with the renderer, CSS entry point, design-system version or confirmed native setup, and audience and primary task. Supply a project-relative path and a literal, non-sensitive excerpt for each of renderer, CSS, and design-system evidence. The plugin checks the excerpts against local files, not whether the excerpts prove every claim. |
-| `2_PLAN` | Call `submit_plan` with the layout, ordered mobile reading sequence, component markup and behavior ownership, and explicit treatment of empty, loading, validation, and error states. Explain why a state does not apply rather than leaving it blank. |
+| `2_PLAN` | Call `submit_frontend_plan` with the layout, ordered mobile reading sequence, component markup and behavior ownership, and explicit treatment of empty, loading, validation, and error states. Explain why a state does not apply rather than leaving it blank. |
 | `3_IMPLEMENT` | Edit UI files. The plugin tracks changed paths and can append static diagnostics to tool output. |
 | `4_VERIFY` | Call `complete_verification` with checks run, the main design decision, and the passed, failed, and unverified items. At least one passed or unverified item is required. Calling the tool directly from implementation also enters verification. |
 | `DONE` | The report is recorded, not necessarily all passing. Another tracked edit invalidates the report. Explicitly loading the skill again starts a new workflow. |

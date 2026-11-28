@@ -87,7 +87,7 @@ export function activate(state: State, explicit = false): State {
 const steps: Record<Stage, string> = {
   IDLE: "inspect a UI target or load the frontend skill",
   "1_DISCOVER": "call submit_discovery",
-  "2_PLAN": "call submit_plan",
+  "2_PLAN": "call submit_frontend_plan",
   "3_IMPLEMENT": "implement the plan, then call complete_verification",
   "4_VERIFY": "call complete_verification",
   DONE: "continue or start another frontend workflow",

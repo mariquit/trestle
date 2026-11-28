@@ -49,7 +49,7 @@ test("only valid checkpoints unlock UI writes, in order", async () => {
   assert.match(writeGate(discovery) ?? "", /submit_discovery/);
   assert.throws(() => plan(discovery, layout), /1_DISCOVER/);
   const planning = await discover(discovery, evidence, read);
-  assert.match(writeGate(planning) ?? "", /submit_plan/);
+  assert.match(writeGate(planning) ?? "", /submit_frontend_plan/);
   assert.throws(() => plan(planning, { ...layout, mobileReadingOrder: [] }), /mobileReadingOrder/);
   assert.throws(() => plan(planning, { ...layout, componentsAndContracts: [] }), /componentsAndContracts/);
   assert.throws(() => plan(planning, { ...layout, statesHandled: { ...layout.statesHandled, error: "" } }), /error/);

@@ -59,7 +59,7 @@ From a local copy of the repository, run `./install.sh` to select skills in a te
 
 The default destination is `$XDG_CONFIG_HOME/opencode/skills`, or `~/.config/opencode/skills` when `XDG_CONFIG_HOME` is unset. Use `--skills-dir PATH` or set `OPENCODE_SKILLS_DIR` to override it. In OpenCode, use `@skill-id` to load an installed skill.
 
-Selecting `frontend` or `frontend-react` always installs its required plugin and locked runtime dependencies under `$XDG_CONFIG_HOME/opencode/plugins/` (default: `~/.config/opencode/plugins/`). OpenCode V2 discovers the packages automatically. No JSON or JSONC file is changed. Plugin installation requires npm. `--skills-dir` alone does not redirect the global plugins directory.
+Selecting `frontend` or `frontend-react` installs its required plugin. OpenCode V2 discovers the `trestle-<skill>.ts` entry points in `$XDG_CONFIG_HOME/opencode/plugins/` (default: `~/.config/opencode/plugins/`). The plugin code and locked runtime dependencies live in the sibling `trestle-plugins/` directory. No JSON or JSONC file is changed. Plugin installation requires npm. `--skills-dir` alone does not redirect the global plugin installation. Use `--upgrade` to migrate an older directory-only installation; the installer backs up the old plugin directory.
 
 For a release install without cloning, download and inspect the launcher before running it. This requires `curl` and `tar` in addition to Node.js. The release assets must be published first.
 

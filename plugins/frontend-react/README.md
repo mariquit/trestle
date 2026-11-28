@@ -4,7 +4,7 @@ This plugin is required by `/frontend-react`. It is for Vite + React DOM only. N
 
 ## Install
 
-Run `./install.sh frontend-react` from the Trestle checkout. The installer requires Node.js 24 or later and npm. OpenCode V2 discovers the required plugin under `$XDG_CONFIG_HOME/opencode/plugins/frontend-react`, or `~/.config/opencode/plugins/frontend-react` if XDG is unset. No config edits are required.
+Run `./install.sh frontend-react` from the Trestle checkout, or add `--upgrade` to replace an older installation. The installer requires Node.js 24 or later and npm. OpenCode V2 discovers the required plugin through `$XDG_CONFIG_HOME/opencode/plugins/trestle-frontend-react.ts`, or `~/.config/opencode/plugins/trestle-frontend-react.ts` if XDG is unset. No config edits are required.
 
 Invoke `/frontend-react` in OpenCode V2. The plugin registers the slash command; `@frontend-react` also loads the skill. If both plugins are installed, the HTML-first gate can also track CSS edits.
 
